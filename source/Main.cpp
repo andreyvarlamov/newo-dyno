@@ -5,53 +5,8 @@
 #include <sdl2/SDL.h>
 
 #include "NewoCommon.h"
+#include "NewoMemory.h"
 #include "DynoDraw.h"
-
-struct memory_arena
-{
-    size_t Size;
-    u8 *Base;
-    size_t Used;
-
-    size_t PrevUsed;
-};
-
-void
-InitializeMemoryArena(memory_arena *Arena, size_t Size, u8 *Base)
-{
-    Arena->Size = Size;
-    Arena->Base = Base;
-    Arena->Used = 0;
-    Arena->PrevUsed = 0;
-}
-
-#define PushStruct(Arena, type) (type *) PushStruct_(Arena, sizeof(type))
-void *
-PushStruct_(memory_arena *Arena, size_t Size)
-{
-    Assert((Arena->Used + Size) <= Arena->Size);
-    void *Result = Arena->Base + Arena->Used;
-    Arena->Used += Size;
-    return Result;
-}
-
-void
-BeginTempMemoryManagement(memory_arena *Arena)
-{
-    if (Arena->PrevUsed == 0)
-    {
-        Arena->PrevUsed = Arena->Used;
-    }
-}
-
-void
-EndTempMemoryManagement(memory_arena *Arena)
-{
-    if (Arena->PrevUsed != 0)
-    {
-        Arena->Used = Arena->PrevUsed;
-    }
-}
 
 int
 main(int Argc, char *Argv[])
@@ -90,7 +45,6 @@ main(int Argc, char *Argv[])
     InitializeMemoryArena(&TransientArena, ApplicationMemorySize, (u8 *) ApplicationMemory);
 
     dd_render_data *DDRenderData = PushStruct(&TransientArena, dd_render_data);
-    dd_render_data *DDRenderData2 = PushStruct(&TransientArena, dd_render_data);
 
     SDL_Event SdlEvent;
     bool ShouldQuit = false;
@@ -122,6 +76,10 @@ main(int Argc, char *Argv[])
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        //DD_DrawSphere(DDRenderData);
+
+        DD_Render(DDRenderData);
 
         SDL_GL_SwapWindow(Window);
     }
