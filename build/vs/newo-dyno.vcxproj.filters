@@ -21,6 +21,9 @@
     <ClCompile Include="..\..\source\DynoDraw.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\NewoMath.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\source\NewoCommon.h">

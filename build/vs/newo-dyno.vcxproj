@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\DynoDraw.cpp" />
     <ClCompile Include="..\..\source\Main.cpp" />
+    <ClCompile Include="..\..\source\NewoMath.cpp" />
     <ClCompile Include="..\..\source\NewoMemory.cpp" />
     <ClCompile Include="..\..\source\NewoShader.cpp" />
   </ItemGroup>

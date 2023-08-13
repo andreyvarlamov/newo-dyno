@@ -41,6 +41,7 @@ main(int Argc, char *Argv[])
 
     size_t ApplicationMemorySize = Megabytes(64);
     void *ApplicationMemory = calloc(1, ApplicationMemorySize);
+    //void *ApplicationMemoryCopy = calloc(1, ApplicatioMemorySize);
 
     memory_arena DDArena{};
     size_t DDArenaSize = Kilobytes(512);
