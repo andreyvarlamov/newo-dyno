@@ -7,20 +7,20 @@
 
 #include "NewoCommon.h"
 
-u32
+static u32
 CompileShaderFromPath(const char *Path, u32 ShaderType);
 
-u32
+static u32
 LinkShaders(u32 VertexShader, u32 FragmentShader);
 
-char *
+static char *
 LoadFileText(const char *Path);
 
 u32
 BuildShaderProgram(const char *VertexPath, const char *FragmentPath)
 {
     u32 VertexShader = CompileShaderFromPath(VertexPath, GL_VERTEX_SHADER);
-    u32 FragmentShader = CompileShaderFromPath(VertexPath, GL_FRAGMENT_SHADER);
+    u32 FragmentShader = CompileShaderFromPath(FragmentPath, GL_FRAGMENT_SHADER);
 
     u32 ShaderProgram = LinkShaders(VertexShader, FragmentShader);
 
@@ -30,7 +30,7 @@ BuildShaderProgram(const char *VertexPath, const char *FragmentPath)
     return ShaderProgram;
 }
 
-u32
+static u32
 CompileShaderFromPath(const char *Path, u32 ShaderType)
 {
     printf("Compiling shader at %s: ", Path);
@@ -39,6 +39,7 @@ CompileShaderFromPath(const char *Path, u32 ShaderType)
     glShaderSource(Shader, 1, &Source, 0);
     glCompileShader(Shader);
     free(Source);
+    Source = 0;
 
     i32 Success = 0;
     glGetShaderiv(Shader, GL_COMPILE_STATUS, &Success);
@@ -50,10 +51,10 @@ CompileShaderFromPath(const char *Path, u32 ShaderType)
     }
     else
     {
-        char LogBuffer[512];
+        char LogBuffer[1024];
         i32 ReturnedSize;
-        glGetShaderInfoLog(Shader, 512, &ReturnedSize, LogBuffer);
-        Assert(ReturnedSize < 512);
+        glGetShaderInfoLog(Shader, 1024, &ReturnedSize, LogBuffer);
+        Assert(ReturnedSize < 1024);
         Assert(LogBuffer[ReturnedSize] == '\0');
         printf("ERROR:\n%s\n", LogBuffer);
 
@@ -62,7 +63,7 @@ CompileShaderFromPath(const char *Path, u32 ShaderType)
     
 }
 
-u32
+static u32
 LinkShaders(u32 VertexShader, u32 FragmentShader)
 {
     u32 ShaderProgram = glCreateProgram();
@@ -78,10 +79,10 @@ LinkShaders(u32 VertexShader, u32 FragmentShader)
     }
     else
     {
-        char LogBuffer[512];
+        char LogBuffer[1024];
         i32 ReturnedSize;
-        glGetProgramInfoLog(ShaderProgram, 512, &ReturnedSize, LogBuffer);
-        Assert(ReturnedSize < 512);
+        glGetProgramInfoLog(ShaderProgram, 1024, &ReturnedSize, LogBuffer);
+        Assert(ReturnedSize < 1024);
         Assert(LogBuffer[ReturnedSize] == '\0');
         printf("ERROR when linking shaders:\n%s\n", LogBuffer);
 
@@ -89,7 +90,7 @@ LinkShaders(u32 VertexShader, u32 FragmentShader)
     }
 }
 
-char *
+static char *
 LoadFileText(const char *Path)
 {
     FILE *File;
@@ -109,4 +110,10 @@ LoadFileText(const char *Path)
     fclose(File);
 
     return Result;
+}
+
+void
+UseShader(u32 ShaderID)
+{
+    glUseProgram(ShaderID);
 }

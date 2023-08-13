@@ -4,6 +4,9 @@
     <Filter Include="Source">
       <UniqueIdentifier>{1afe1550-a19f-4029-84ed-7c016a3795d8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{742d6673-1a63-4fae-8d2d-6aa4d151a1c4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\Main.cpp">
@@ -13,6 +16,9 @@
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\NewoShader.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\DynoDraw.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
@@ -29,5 +35,16 @@
     <ClInclude Include="..\..\source\NewoShader.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\source\DynoDraw.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\resource\shader\DynoDraw.vs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\resource\shader\DynoDraw.fs">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

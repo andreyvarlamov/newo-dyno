@@ -19,15 +19,21 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\source\DynoDraw.cpp" />
     <ClCompile Include="..\..\source\Main.cpp" />
     <ClCompile Include="..\..\source\NewoMemory.cpp" />
     <ClCompile Include="..\..\source\NewoShader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\source\DynoDraw.h" />
     <ClInclude Include="..\..\source\NewoCommon.h" />
     <ClInclude Include="..\..\source\NewoMath.h" />
     <ClInclude Include="..\..\source\NewoMemory.h" />
     <ClInclude Include="..\..\source\NewoShader.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\resource\shader\DynoDraw.fs" />
+    <None Include="..\..\resource\shader\DynoDraw.vs" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

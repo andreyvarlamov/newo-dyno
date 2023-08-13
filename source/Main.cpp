@@ -40,11 +40,13 @@ main(int Argc, char *Argv[])
     glViewport(0, 0, WindowWidth, WindowHeight);
 
     size_t ApplicationMemorySize = Megabytes(64);
-    void *ApplicationMemory = malloc(ApplicationMemorySize);
-    memory_arena TransientArena{};
-    InitializeMemoryArena(&TransientArena, ApplicationMemorySize, (u8 *) ApplicationMemory);
+    void *ApplicationMemory = calloc(1, ApplicationMemorySize);
 
-    dd_render_data *DDRenderData = PushStruct(&TransientArena, dd_render_data);
+    memory_arena DDArena{};
+    size_t DDArenaSize = Kilobytes(512);
+    Assert(DDArenaSize >= sizeof(dd_render_data));
+    InitializeMemoryArena(&DDArena, DDArenaSize, (u8 *) ApplicationMemory);
+    dd_render_data *DDRenderData = DD_InitializeRenderData(&DDArena);
 
     SDL_Event SdlEvent;
     bool ShouldQuit = false;
@@ -77,7 +79,7 @@ main(int Argc, char *Argv[])
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        //DD_DrawSphere(DDRenderData);
+        DD_DrawSphere(DDRenderData, 1.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 10, 15);
 
         DD_Render(DDRenderData);
 
