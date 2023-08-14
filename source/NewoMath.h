@@ -28,6 +28,12 @@ union vec3
 typedef f32 mat3[3][3];
 //typedef f32 mat4[4][4];
 
+struct plane
+{
+    vec3 Normal; // Plane normal. Points X on the plane satisfy DotProduct(Normal, X) = Distance
+    f32 Distance; // Distance from origin; Distance = DotProduct(Normal, P) for a given point P on the plane
+};
+
 inline f32
 AbsF32(f32 Value);
 
@@ -63,5 +69,9 @@ BarycentricCoordsProjectedAreas(vec3 P, vec3 A, vec3 B, vec3 C, f32 *U, f32 *V, 
 
 bool
 TestPointTriangle(vec3 P, vec3 A, vec3 B, vec3 C);
+
+// Assumes points are non-colinear and CCW
+plane
+ComputePlane(vec3 A, vec3 B, vec3 C);
 
 #endif

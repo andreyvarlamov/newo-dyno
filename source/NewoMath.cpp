@@ -150,3 +150,14 @@ TestPointTriangle(vec3 P, vec3 A, vec3 B, vec3 C)
     BarycentricCoordsProjectedAreas(P, A, B, C, NULL, &V, &W);
     return ((V >= 0.0f) && (W >= 0.0f) && ((V + W) <= 1.0f));
 }
+
+plane
+ComputePlane(vec3 A, vec3 B, vec3 C)
+{
+    plane Result;
+
+    Result.Normal = CrossProduct(B - A, C - A)); // CCW
+    Result.Distance = DotProduct(Result.Normal, A);
+
+    return Result;
+}
