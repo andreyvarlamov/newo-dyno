@@ -14,11 +14,11 @@ struct dd_render_data
     memory_arena *MemoryArena;
 
     vec3 Positions[MAX_VERTEX_COUNT];
-    vec3 Colors[MAX_VERTEX_COUNT];
     vec3 Normals[MAX_VERTEX_COUNT];
+    vec3 Colors[MAX_VERTEX_COUNT];
     i32 Indices[MAX_INDEX_COUNT];
     u32 VerticesUsed;
-    i32 IndicesUsed;
+    u32 IndicesUsed;
 
     u32 VAO;
     u32 VBO;
@@ -30,7 +30,7 @@ dd_render_data *
 DD_InitializeRenderData(memory_arena *MemoryArena);
 
 void
-DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color, i32 Rings, i32 Sectors);
+DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color, u32 RingCount, u32 SectorCount);
 
 void
 DD_Render(dd_render_data *RenderData);

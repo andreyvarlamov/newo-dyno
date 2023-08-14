@@ -16,8 +16,6 @@ typedef uint64_t u64;
 typedef float f32;
 typedef double f64;
 
-#define PI 3.141592653f
-
 #define Assert(Expression) if (!(Expression)) { *(int *) 0 = 0; }
 
 #define Kilobytes(Value) (         (Value) * 1024)

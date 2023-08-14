@@ -4,43 +4,55 @@
 
 // TODO: These functions are untested
 
-inline f32
+f32
 AbsF32(f32 Value)
 {
     return ((Value >= 0.0f) ? Value : -Value);
 }
 
-inline f32
+f32
 SqrtF32(f32 Value)
 {
     return sqrtf(Value);
 }
 
-inline vec3
+f32
+SinF32(f32 Value)
+{
+    return sinf(Value);
+}
+
+f32
+CosF32(f32 Value)
+{
+    return cosf(Value);
+}
+
+vec3
 operator+(vec3 V0, vec3 V1)
 {
     return vec3 { V0.X + V1.X, V0.Y + V1.Y, V0.Z + V1.Z };
 }
 
-inline vec3
+vec3
 operator-(vec3 V0, vec3 V1)
 {
     return vec3 { V0.X - V1.X, V0.Y - V1.Y, V0.Z - V1.Z };
 }
 
-inline f32
+f32
 LengthVec3(vec3 V)
 {
     return SqrtF32(DotProduct(V, V));
 }
 
-inline f32
+f32
 DotProduct(vec3 V0, vec3 V1)
 {
     return (V0.X * V1.X + V0.Y * V1.Y + V0.Z * V1.Z);
 }
 
-inline vec3
+vec3
 CrossProduct(vec3 V0, vec3 V1)
 {
     return vec3 { V0.Y * V1.Z - V0.Z * V1.Y,
@@ -48,14 +60,14 @@ CrossProduct(vec3 V0, vec3 V1)
                   V0.X * V1.Y - V0.Y * V1.X };
 }
 
-inline f32
+f32
 TriDoubleSignedArea(vec3 A, vec3 B, vec3 C)
 {
     vec3 Cross = CrossProduct(B - A, C - A);
     return LengthVec3(Cross);
 }
 
-inline f32
+f32
 TriDoubleArea2D(f32 X1, f32 Y1, f32 X2, f32 Y2, f32 X3, f32 Y3)
 {
     return (X1 - X2) * (Y2 - Y3) - (X2 - X3) * (Y1 - Y2);
@@ -156,7 +168,7 @@ ComputePlane(vec3 A, vec3 B, vec3 C)
 {
     plane Result;
 
-    Result.Normal = CrossProduct(B - A, C - A)); // CCW
+    Result.Normal = CrossProduct(B - A, C - A); // CCW
     Result.Distance = DotProduct(Result.Normal, A);
 
     return Result;

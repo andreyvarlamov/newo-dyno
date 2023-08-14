@@ -3,6 +3,8 @@
 
 #include "NewoCommon.h"
 
+#define PI32 3.141592653f
+
 union vec3
 {
     struct
@@ -34,28 +36,37 @@ struct plane
     f32 Distance; // Distance from origin; Distance = DotProduct(Normal, P) for a given point P on the plane
 };
 
-inline f32
+f32
 AbsF32(f32 Value);
 
-inline vec3
+f32
+SqrtF32(f32 Value);
+
+f32
+SinF32(f32 Value);
+
+f32
+CosF32(f32 Value);
+
+vec3
 operator+(vec3 V0, vec3 V1);
 
-inline vec3
+vec3
 operator-(vec3 V0, vec3 V1);
 
-inline f32
+f32
 LengthVec3(vec3 V);
 
-inline f32
+f32
 DotProduct(vec3 V0, vec3 V1);
 
-inline vec3
+vec3
 CrossProduct(vec3 V0, vec3 V1);
 
-inline f32
+f32
 TriDoubleSignedArea(vec3 A, vec3 B, vec3 C);
 
-inline f32
+f32
 TriDoubleArea2D(f32 X1, f32 Y1, f32 X2, f32 Y2, f32 X3, f32 Y3);
 
 void

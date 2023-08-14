@@ -49,15 +49,120 @@ DD_InitializeRenderData(memory_arena *MemoryArena)
 }
 
 void
-DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color, i32 Rings, i32 Sectors)
+DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color, u32 RingCount, u32 SectorCount)
 {
-    //vec3 *Positions = RenderData->Positions;
-    //vec3 *Colors = RenderData->Positions;
-    //vec3 *Normals = RenderData->Normals;
+    Assert(RingCount > 2);
+    Assert(SectorCount > 2);
+    u32 ExpectedVertexCount = 2 + (RingCount - 2) * SectorCount;
+    u32 ExpectedIndexCount = (RingCount - 2) * SectorCount * 6;
+    Assert(RenderData->VerticesUsed + ExpectedVertexCount <= MAX_VERTEX_COUNT);
+    Assert(RenderData->IndicesUsed + ExpectedIndexCount <= MAX_INDEX_COUNT);
 
-    Assert(RenderData->VerticesUsed + Rings * Sectors <= MAX_VERTEX_COUNT);
-    Assert(RenderData->IndicesUsed + Rings * Sectors * 6 <= MAX_INDEX_COUNT);
+    vec3 *Positions = &RenderData->Positions[RenderData->VerticesUsed];
+    vec3 *Normals = &RenderData->Normals[RenderData->VerticesUsed];
+    vec3 *Colors = &RenderData->Colors[RenderData->VerticesUsed];
 
+    u32 VertexIndex = 0;
+
+    f32 SphereRadius = Radius;
+
+    for (u32 RingIndex = 0; RingIndex < RingCount; ++RingIndex)
+    {
+        if (RingIndex == 0)
+        {
+            // At RingIndex = 0 -> VerticalAngle = PI/2 -> cos = 0 -> 0 radius ring -> north pole
+            Positions[VertexIndex] = vec3 { 0.0f, SphereRadius, 0.0f } + Position;
+            Normals[VertexIndex] = vec3 { 0.0f, 1.0f, 0.0f };
+            Colors[VertexIndex] = Color;
+            VertexIndex++;
+        }
+        else if (RingIndex == (RingCount - 1))
+        {
+            // At RingIndex = RingCount - 1 -> VerticalAngle = -PI/2 -> cos = 0; 0 radius ring -> south pole
+            Positions[VertexIndex] = vec3 { 0.0f, -SphereRadius, 0.0f } + Position;
+            Normals[VertexIndex] = vec3 { 0.0f, -1.0f, 0.0f };
+            Colors[VertexIndex] = Color;
+            VertexIndex++;
+        }
+        else
+        {
+            f32 RingRatio = ((f32) RingIndex / (f32) (RingCount - 1));
+            f32 Y = 1.0f - 2.0f * RingRatio; // 1 -> -1 range
+
+            f32 VerticalAngle = (PI32 / 2.0f - (PI32 * RingRatio)); // PI/2 -> -PI/2 Range
+            f32 RingRadius = SphereRadius * CosF32(VerticalAngle);
+
+            for (u32 SectorIndex = 0; SectorIndex < SectorCount; ++SectorIndex)
+            {
+                f32 SectorRatio = (f32) SectorIndex / (f32) SectorCount;
+                f32 Theta = 2.0f * PI32 * SectorRatio;
+                f32 X = SinF32(Theta);
+                f32 Z = CosF32(Theta);
+
+                Positions[VertexIndex] = vec3 { RingRadius * X, SphereRadius * Y, RingRadius * Z } + Position;
+                Normals[VertexIndex] = vec3 { X, Y, Z };
+                Colors[VertexIndex] = Color;
+                VertexIndex++;
+            }
+        }
+    }
+    Assert(VertexIndex == ExpectedVertexCount);
+
+    i32 *Indices = &RenderData->Indices[RenderData->IndicesUsed];
+
+    u32 IndexIndex = 0;
+
+    for (u32 RingIndex = 0; RingIndex < RingCount - 1; ++RingIndex)
+    {
+        for (u32 SectorIndex = 0; SectorIndex < SectorCount; ++SectorIndex)
+        {
+            i32 NextSectorIndex = ((SectorIndex == (SectorCount - 1)) ?
+                                   (0) :
+                                   ((i32) SectorIndex + 1));
+
+            if (RingIndex == 0)
+            {
+                // Sectors are triangles, add 3 indices
+
+                i32 CurrentRingSector0 = 0;
+                i32 NextRingSector0 = 1;
+
+                Indices[IndexIndex++] = CurrentRingSector0 + (i32) RenderData->VerticesUsed;
+                Indices[IndexIndex++] = NextRingSector0 + (i32) SectorIndex + (i32) RenderData->VerticesUsed;
+                Indices[IndexIndex++] = NextRingSector0 + NextSectorIndex + (i32) RenderData->VerticesUsed;
+            }
+            else
+            {
+                i32 CurrentRingSector0 = 1 + ((i32) RingIndex - 1) * (i32) SectorCount;
+                i32 NextRingSector0 = 1 + (i32) RingIndex * (i32) SectorCount;
+
+                if (RingIndex == (RingCount - 2))
+                {
+                    // Sectors are triangles, add 3 indices
+
+                    Indices[IndexIndex++] = CurrentRingSector0 + (i32) SectorIndex + (i32) RenderData->VerticesUsed;
+                    Indices[IndexIndex++] = NextRingSector0 + (i32) RenderData->VerticesUsed;
+                    Indices[IndexIndex++] = CurrentRingSector0 + NextSectorIndex + (i32) RenderData->VerticesUsed;
+                }
+                else
+                {
+                    // Sectors are quads, add 6 indices
+
+                    Indices[IndexIndex++] = CurrentRingSector0 + (i32) SectorIndex + (i32) RenderData->VerticesUsed;
+                    Indices[IndexIndex++] = NextRingSector0 + (i32) SectorIndex + (i32) RenderData->VerticesUsed;
+                    Indices[IndexIndex++] = NextRingSector0 + NextSectorIndex + (i32) RenderData->VerticesUsed;
+
+                    Indices[IndexIndex++] = CurrentRingSector0 + (i32) SectorIndex + (i32) RenderData->VerticesUsed;
+                    Indices[IndexIndex++] = NextRingSector0 + NextSectorIndex + (i32) RenderData->VerticesUsed;
+                    Indices[IndexIndex++] = CurrentRingSector0 + NextSectorIndex + (i32) RenderData->VerticesUsed;
+                }
+            }
+        }
+    }
+    Assert(IndexIndex == ExpectedIndexCount);
+
+    RenderData->VerticesUsed += VertexIndex;
+    RenderData->IndicesUsed += IndexIndex;
 }
 
 void
