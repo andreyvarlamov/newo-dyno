@@ -1,6 +1,7 @@
 #include "NewoMath.h"
 
 #include <cmath>
+#include <cfloat>
 
 // TODO: These functions are untested
 
@@ -40,10 +41,28 @@ operator-(vec3 V0, vec3 V1)
     return vec3 { V0.X - V1.X, V0.Y - V1.Y, V0.Z - V1.Z };
 }
 
+vec2
+operator+(vec2 V0, vec2 V1)
+{
+    return vec2 { V0.X + V1.X, V0.Y + V1.Y };
+}
+
+vec2
+operator-(vec2 V0, vec2 V1)
+{
+    return vec2 { V0.X - V1.X, V0.Y - V1.Y };
+}
+
 f32
 LengthVec3(vec3 V)
 {
     return SqrtF32(DotProduct(V, V));
+}
+
+f32
+DotProduct2D(vec2 V0, vec2 V1)
+{
+    return (V0.X * V1.X + V0.Y * V1.Y);
 }
 
 f32
@@ -172,4 +191,46 @@ ComputePlane(vec3 A, vec3 B, vec3 C)
     Result.Distance = DotProduct(Result.Normal, A);
 
     return Result;
+}
+
+bool
+IsQuadConvex(vec3 A, vec3 B, vec3 C, vec3 D)
+{
+    vec3 NormalBDA = CrossProduct(D - B, A - B);
+    vec3 NormalBDC = CrossProduct(D - B, C - B);
+    if (DotProduct(NormalBDA, NormalBDC) >= 0.0f)
+    {
+        return false;
+    }
+
+    vec3 NormalACD = CrossProduct(C - A, D - A);
+    vec3 NormalACB = CrossProduct(C - A, B - A);
+    return (DotProduct(NormalACD, NormalACB) < 0.0f);
+}
+
+i32
+PointFarthestFromEdge(vec2 A, vec2 B, vec2 *Points, i32 PointCount)
+{
+    vec2 Edge = B - A;
+    vec2 EPerp = vec2 { -Edge.Y, Edge.X };  // CCW Perpendicular
+
+    i32 BestIndex = -1;
+    f32 MaxValue = -FLT_MAX;
+    f32 RightMostValue = -FLT_MAX;
+
+    // NOTE: This was 1 in the example (I think that's wrong)
+    for (i32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+    {
+        f32 Distance = DotProduct2D(Points[PointIndex] - A, EPerp);
+        f32 R = DotProduct2D(Points[PointIndex] - A, Edge);
+        // If there are multiple points with the same distance to edge, take the right-most value
+        if (Distance > MaxValue || (Distance == MaxValue || R > RightMostValue))
+        {
+            BestIndex = PointIndex;
+            MaxValue = Distance;
+            RightMostValue = R;
+        }
+    }
+
+    return BestIndex;
 }
