@@ -59,6 +59,13 @@ LengthVec3(vec3 V)
     return SqrtF32(DotProduct(V, V));
 }
 
+vec3
+NormalizeVec3(vec3 V)
+{
+    f32 Length = LengthVec3(V);
+    return vec3 { V.X / Length, V.Y / Length, V.Z / Length };
+}
+
 f32
 DotProduct2D(vec2 V0, vec2 V1)
 {
@@ -77,6 +84,42 @@ CrossProduct(vec3 V0, vec3 V1)
     return vec3 { V0.Y * V1.Z - V0.Z * V1.Y,
                   V0.X * V1.Z - V0.Z * V1.X,
                   V0.X * V1.Y - V0.Y * V1.X };
+}
+
+mat4
+GetProjectionMat4(f32 AspectRatio, f32 HalfFOV, f32 Near, f32 Far)
+{
+    mat4 ProjectionMat { };
+
+    //ProjectionMat
+
+    return ProjectionMat;
+}
+
+mat4
+GetLookAtMat4(vec3 Position, vec3 Front, vec3 Up)
+{
+    Front = NormalizeVec3(Front - Position);
+    Up = NormalizeVec3(Up);
+    vec3 Right = NormalizeVec3(CrossProduct(Front, Up));
+
+    mat4 LookAtMat { };
+
+    LookAtMat.D[0][0] = Right.X;
+    LookAtMat.D[0][1] = Right.Y;
+    LookAtMat.D[0][2] = Right.Z;
+    LookAtMat.D[1][0] = Up.X;
+    LookAtMat.D[1][1] = Up.Y;
+    LookAtMat.D[1][2] = Up.Z;
+    LookAtMat.D[2][0] = Front.X;
+    LookAtMat.D[2][1] = Front.Y;
+    LookAtMat.D[2][2] = Front.Z;
+
+    LookAtMat.D[3][0] = Position.X;
+    LookAtMat.D[3][1] = Position.Y;
+    LookAtMat.D[3][2] = Position.Z;
+
+    return LookAtMat;
 }
 
 f32

@@ -25,6 +25,28 @@ union vec3
     f32 D[3];
 };
 
+union vec4
+{
+    struct
+    {
+        f32 X, Y, Z, W;
+    };
+
+    f32 D[4];
+};
+
+// NOTE: All mat functions assume Column-Major representation [Column][Row]
+
+struct mat3
+{
+    f32 D[3][3];
+};
+
+struct mat4
+{
+    f32 D[4][4];
+};
+
 //union mat3
 //{
 //    struct
@@ -37,7 +59,7 @@ union vec3
 
 //typedef f32 vec3[3];
 //typedef f32 vec4[4];
-typedef f32 mat3[3][3];
+//typedef f32 mat3[3][3];
 //typedef f32 mat4[4][4];
 
 struct plane
@@ -73,6 +95,9 @@ operator-(vec2 V0, vec2 V1);
 f32
 LengthVec3(vec3 V);
 
+vec3
+NormalizeVec3(vec3 V);
+
 f32
 DotProduct2D(vec2 V0, vec2 V1);
 
@@ -81,6 +106,12 @@ DotProduct(vec3 V0, vec3 V1);
 
 vec3
 CrossProduct(vec3 V0, vec3 V1);
+
+mat4
+GetProjectionMat4(f32 AspectRatio, f32 HalfFOV, f32 Near, f32 Far);
+
+mat4
+GetLookAtMat4(vec3 Position, vec3 Front, vec3 Up);
 
 f32
 TriDoubleSignedArea(vec3 A, vec3 B, vec3 C);

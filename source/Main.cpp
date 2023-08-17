@@ -34,10 +34,10 @@ main(int Argc, char *Argv[])
     glEnable(GL_DEPTH_TEST);
     // glEnable(GL_CULL_FACE);
 
-    i32 WindowWidth;
-    i32 WindowHeight;
-    SDL_GetWindowSize(Window, &WindowWidth, &WindowHeight);
-    glViewport(0, 0, WindowWidth, WindowHeight);
+    i32 ScreenWidth;
+    i32 ScreenHeight;
+    SDL_GetWindowSize(Window, &ScreenWidth, &ScreenHeight);
+    glViewport(0, 0, ScreenWidth, ScreenHeight);
 
     size_t ApplicationMemorySize = Megabytes(64);
     void *ApplicationMemory = calloc(1, ApplicationMemorySize);
@@ -48,6 +48,8 @@ main(int Argc, char *Argv[])
     Assert(DDArenaSize >= sizeof(dd_render_data));
     InitializeMemoryArena(&DDArena, DDArenaSize, (u8 *) ApplicationMemory);
     dd_render_data *DDRenderData = DD_InitializeRenderData(&DDArena);
+
+    mat4 ProjectionMat = GetProjectionMat4((f32) ScreenWidth / (f32) ScreenHeight, 45.0f, 0.001f, 1000.0f);
 
     SDL_Event SdlEvent;
     bool ShouldQuit = false;
@@ -80,9 +82,11 @@ main(int Argc, char *Argv[])
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        mat4 ViewMat = GetLookAtMat4(vec3 { 0.0f, 0.0f, 5.0f }, vec3 { 0.0f, 0.0f, 4.0f }, vec3 { 0.0f, 1.0f, 0.0f });
+
         DD_DrawSphere(DDRenderData, 1.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 5, 4);
 
-        DD_Render(DDRenderData);
+        DD_Render(DDRenderData, ProjectionMat, ViewMat);
 
         SDL_GL_SwapWindow(Window);
     }

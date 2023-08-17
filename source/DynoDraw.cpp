@@ -87,7 +87,7 @@ DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color,
         else
         {
             f32 RingRatio = ((f32) RingIndex / (f32) (RingCount - 1));
-            f32 Y = 1.0f - 2.0f * RingRatio; // 1 -> -1 range
+            f32 Y = SphereRadius - 2.0f * SphereRadius * RingRatio; // 1 -> -1 range
 
             f32 VerticalAngle = (PI32 / 2.0f - (PI32 * RingRatio)); // PI/2 -> -PI/2 Range
             f32 RingRadius = SphereRadius * CosF32(VerticalAngle);
@@ -96,11 +96,12 @@ DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color,
             {
                 f32 SectorRatio = (f32) SectorIndex / (f32) SectorCount;
                 f32 Theta = 2.0f * PI32 * SectorRatio;
-                f32 X = SinF32(Theta);
-                f32 Z = CosF32(Theta);
+                f32 X = RingRadius * SinF32(Theta);
+                f32 Z = RingRadius * CosF32(Theta);
 
-                Positions[VertexIndex] = vec3 { RingRadius * X, SphereRadius * Y, RingRadius * Z } + Position;
-                Normals[VertexIndex] = vec3 { X, Y, Z };
+                vec3 VertPosition = vec3 { X, Y, Z };
+                Positions[VertexIndex] = VertPosition + Position;  // Add the position of the sphere origin
+                Normals[VertexIndex] = NormalizeVec3(VertPosition);
                 Colors[VertexIndex] = Color;
                 VertexIndex++;
             }
@@ -166,7 +167,7 @@ DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color,
 }
 
 void
-DD_Render(dd_render_data *RenderData)
+DD_Render(dd_render_data *RenderData, mat4 Projection, mat4 View)
 {
     glBindBuffer(GL_ARRAY_BUFFER, RenderData->VBO);
     size_t AttribUsedBytes = sizeof(vec3) * RenderData->VerticesUsed;

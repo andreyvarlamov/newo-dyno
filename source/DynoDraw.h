@@ -33,6 +33,6 @@ void
 DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color, u32 RingCount, u32 SectorCount);
 
 void
-DD_Render(dd_render_data *RenderData);
+DD_Render(dd_render_data *RenderData, mat4 Projection, mat4 View);
 
 #endif
