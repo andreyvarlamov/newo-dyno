@@ -7,13 +7,13 @@
 
 #include "NewoCommon.h"
 
-static u32
+internal u32
 CompileShaderFromPath(const char *Path, u32 ShaderType);
 
-static u32
+internal u32
 LinkShaders(u32 VertexShader, u32 FragmentShader);
 
-static char *
+internal char *   
 LoadFileText(const char *Path);
 
 u32
@@ -30,7 +30,7 @@ BuildShaderProgram(const char *VertexPath, const char *FragmentPath)
     return ShaderProgram;
 }
 
-static u32
+internal u32
 CompileShaderFromPath(const char *Path, u32 ShaderType)
 {
     printf("Compiling shader at %s: ", Path);
@@ -63,7 +63,7 @@ CompileShaderFromPath(const char *Path, u32 ShaderType)
     
 }
 
-static u32
+internal u32
 LinkShaders(u32 VertexShader, u32 FragmentShader)
 {
     u32 ShaderProgram = glCreateProgram();
@@ -90,7 +90,7 @@ LinkShaders(u32 VertexShader, u32 FragmentShader)
     }
 }
 
-static char *
+internal char *
 LoadFileText(const char *Path)
 {
     FILE *File;

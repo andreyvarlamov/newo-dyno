@@ -21,13 +21,15 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\DynoDraw.cpp" />
     <ClCompile Include="..\..\source\Main.cpp" />
-    <ClCompile Include="..\..\source\NewoMath.cpp" />
+    <ClCompile Include="..\..\source\NewoGeometry.cpp" />
     <ClCompile Include="..\..\source\NewoMemory.cpp" />
     <ClCompile Include="..\..\source\NewoShader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\source\DynoDraw.h" />
     <ClInclude Include="..\..\source\NewoCommon.h" />
+    <ClInclude Include="..\..\source\NewoGeometry.h" />
+    <ClInclude Include="..\..\source\NewoLinearMath.h" />
     <ClInclude Include="..\..\source\NewoMath.h" />
     <ClInclude Include="..\..\source\NewoMemory.h" />
     <ClInclude Include="..\..\source\NewoShader.h" />
@@ -135,7 +137,7 @@
       <ExceptionHandling>false</ExceptionHandling>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
-      <DisableSpecificWarnings>4201;4100</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4201;4100;4189</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

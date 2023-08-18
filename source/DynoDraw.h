@@ -2,7 +2,7 @@
 #define DYNO_DRAW_H
 
 #include "NewoCommon.h"
-#include "NewoMath.h"
+#include "NewoLinearMath.h"
 #include "NewoMemory.h"
 
 #define MAX_VERTEX_COUNT 4096

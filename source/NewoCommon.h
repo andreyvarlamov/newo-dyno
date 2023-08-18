@@ -23,4 +23,8 @@ typedef double f64;
 #define Gigabytes(Value) (Megabytes(Value) * 1024)
 #define Terabytes(Value) (Gigabytes(Value) * 1024)
 
+#define global_variable static
+#define local_persist static
+#define internal static
+
 #endif

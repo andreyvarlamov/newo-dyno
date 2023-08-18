@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 
 #include "NewoCommon.h"
+#include "NewoLinearMath.h"
 #include "NewoMath.h"
 #include "NewoMemory.h"
 #include "NewoShader.h"
@@ -101,7 +102,7 @@ DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color,
 
                 vec3 VertPosition = vec3 { X, Y, Z };
                 Positions[VertexIndex] = VertPosition + Position;  // Add the position of the sphere origin
-                Normals[VertexIndex] = NormalizeVec3(VertPosition);
+                Normals[VertexIndex] = VecNormalize(VertPosition);
                 Colors[VertexIndex] = Color;
                 VertexIndex++;
             }
@@ -165,7 +166,6 @@ DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color,
     RenderData->VerticesUsed += VertexIndex;
     RenderData->IndicesUsed += IndexIndex;
 }
-
 void
 DD_Render(dd_render_data *RenderData, mat4 Projection, mat4 View)
 {

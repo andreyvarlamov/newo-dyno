@@ -5,8 +5,15 @@
 #include <sdl2/SDL.h>
 
 #include "NewoCommon.h"
+#include "NewoLinearMath.h"
 #include "NewoMemory.h"
 #include "DynoDraw.h"
+
+mat4
+GetProjectionMat4(f32 AspectRatio, f32 HalfFOV, f32 Near, f32 Far);
+
+mat4
+GetLookAtMat4(vec3 Position, vec3 Front, vec3 Up);
 
 int
 main(int Argc, char *Argv[])
@@ -93,4 +100,40 @@ main(int Argc, char *Argv[])
 
     SDL_Quit();
     return 0;
+}
+
+mat4
+GetProjectionMat4(f32 AspectRatio, f32 HalfFOV, f32 Near, f32 Far)
+{
+    mat4 ProjectionMat { };
+
+    //ProjectionMat
+
+    return ProjectionMat;
+}
+
+mat4
+GetLookAtMat4(vec3 Position, vec3 Front, vec3 Up)
+{
+    Front = VecNormalize(Front - Position);
+    Up = VecNormalize(Up);
+    vec3 Right = VecNormalize(CrossProduct(Front, Up));
+
+    mat4 LookAtMat { };
+
+    LookAtMat.D[0][0] = Right.X;
+    LookAtMat.D[0][1] = Right.Y;
+    LookAtMat.D[0][2] = Right.Z;
+    LookAtMat.D[1][0] = Up.X;
+    LookAtMat.D[1][1] = Up.Y;
+    LookAtMat.D[1][2] = Up.Z;
+    LookAtMat.D[2][0] = Front.X;
+    LookAtMat.D[2][1] = Front.Y;
+    LookAtMat.D[2][2] = Front.Z;
+
+    LookAtMat.D[3][0] = Position.X;
+    LookAtMat.D[3][1] = Position.Y;
+    LookAtMat.D[3][2] = Position.Z;
+
+    return LookAtMat;
 }
