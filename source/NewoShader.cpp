@@ -6,6 +6,7 @@
 #include <glad/glad.h>
 
 #include "NewoCommon.h"
+#include "NewoLinearMath.h"
 
 internal u32
 CompileShaderFromPath(const char *Path, u32 ShaderType);
@@ -112,8 +113,21 @@ LoadFileText(const char *Path)
     return Result;
 }
 
-void
-UseShader(u32 ShaderID)
+bool
+SetUniformMat4F(u32 ShaderID, const char *UniformName, f32 *Value, bool UseProgram)
 {
-    glUseProgram(ShaderID);
+    if (UseProgram)
+    {
+        glUseProgram(ShaderID);
+    }
+    
+    i32 UniformLocation = glGetUniformLocation(ShaderID, UniformName);
+
+    if (UniformLocation == -1)
+    {
+        return false;
+    }
+
+    glUniformMatrix4fv(UniformLocation, 1, false, Value);
+    return true;
 }

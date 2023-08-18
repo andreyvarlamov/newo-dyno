@@ -88,10 +88,10 @@ DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color,
         else
         {
             f32 RingRatio = ((f32) RingIndex / (f32) (RingCount - 1));
-            f32 Y = SphereRadius - 2.0f * SphereRadius * RingRatio; // 1 -> -1 range
-
             f32 VerticalAngle = (PI32 / 2.0f - (PI32 * RingRatio)); // PI/2 -> -PI/2 Range
+
             f32 RingRadius = SphereRadius * CosF32(VerticalAngle);
+            f32 Y = SphereRadius * SinF32(VerticalAngle); // Radius -> -Radiu range
 
             for (u32 SectorIndex = 0; SectorIndex < SectorCount; ++SectorIndex)
             {
@@ -179,7 +179,11 @@ DD_Render(dd_render_data *RenderData, mat4 Projection, mat4 View)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, RenderData->EBO);
     glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, IndicesUsedBytes, &RenderData->Indices);
 
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
     UseShader(RenderData->Shader);
+    SetUniformMat4F(RenderData->Shader, "Projection", (f32 *) &Projection, false);
+    SetUniformMat4F(RenderData->Shader, "View", (f32 *) &View, false);
     glBindVertexArray(RenderData->VAO);
     glDrawElements(GL_TRIANGLES, RenderData->IndicesUsed, GL_UNSIGNED_INT, 0);
 

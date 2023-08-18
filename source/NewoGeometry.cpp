@@ -7,7 +7,7 @@
 f32
 TriDoubleSignedArea(vec3 A, vec3 B, vec3 C)
 {
-    vec3 Cross = CrossProduct(B - A, C - A);
+    vec3 Cross = VecCrossProduct(B - A, C - A);
     return VecLength(Cross);
 }
 
@@ -58,7 +58,7 @@ BarycentricCoordsAreas(vec3 P, vec3 A, vec3 B, vec3 C, f32 *U, f32 *V, f32 *W)
 void
 BarycentricCoordsProjectedAreas(vec3 P, vec3 A, vec3 B, vec3 C, f32 *U, f32 *V, f32 *W)
 {
-    vec3 M = CrossProduct(B - A, C - A); // Unnormalzied triangle normal
+    vec3 M = VecCrossProduct(B - A, C - A); // Unnormalzied triangle normal
 
     f32 X = AbsF32(M.X);
     f32 Y = AbsF32(M.Y);
@@ -112,7 +112,7 @@ ComputePlane(vec3 A, vec3 B, vec3 C)
 {
     plane Result;
 
-    Result.Normal = CrossProduct(B - A, C - A); // CCW
+    Result.Normal = VecCrossProduct(B - A, C - A); // CCW
     Result.Distance = VecDotProduct(Result.Normal, A);
 
     return Result;
@@ -121,15 +121,15 @@ ComputePlane(vec3 A, vec3 B, vec3 C)
 bool
 IsQuadConvex(vec3 A, vec3 B, vec3 C, vec3 D)
 {
-    vec3 NormalBDA = CrossProduct(D - B, A - B);
-    vec3 NormalBDC = CrossProduct(D - B, C - B);
+    vec3 NormalBDA = VecCrossProduct(D - B, A - B);
+    vec3 NormalBDC = VecCrossProduct(D - B, C - B);
     if (VecDotProduct(NormalBDA, NormalBDC) >= 0.0f)
     {
         return false;
     }
 
-    vec3 NormalACD = CrossProduct(C - A, D - A);
-    vec3 NormalACB = CrossProduct(C - A, B - A);
+    vec3 NormalACD = VecCrossProduct(C - A, D - A);
+    vec3 NormalACB = VecCrossProduct(C - A, B - A);
     return (VecDotProduct(NormalACD, NormalACB) < 0.0f);
 }
 

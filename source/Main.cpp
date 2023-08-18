@@ -10,10 +10,10 @@
 #include "DynoDraw.h"
 
 mat4
-GetProjectionMat4(f32 AspectRatio, f32 HalfFOV, f32 Near, f32 Far);
+GetPerspecitveProjectionMat(f32 FovY_Degrees, f32 AspectRatio, f32 Near, f32 Far);
 
 mat4
-GetLookAtMat4(vec3 Position, vec3 Front, vec3 Up);
+GetLookAtMat(vec3 Position, vec3 Front, vec3 Up);
 
 int
 main(int Argc, char *Argv[])
@@ -39,7 +39,7 @@ main(int Argc, char *Argv[])
     printf("Version: %s\n", glGetString(GL_VERSION));
 
     glEnable(GL_DEPTH_TEST);
-    // glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
 
     i32 ScreenWidth;
     i32 ScreenHeight;
@@ -56,7 +56,7 @@ main(int Argc, char *Argv[])
     InitializeMemoryArena(&DDArena, DDArenaSize, (u8 *) ApplicationMemory);
     dd_render_data *DDRenderData = DD_InitializeRenderData(&DDArena);
 
-    mat4 ProjectionMat = GetProjectionMat4((f32) ScreenWidth / (f32) ScreenHeight, 45.0f, 0.001f, 1000.0f);
+    mat4 ProjectionMat = GetPerspecitveProjectionMat(90.0f, (f32) ScreenWidth / (f32) ScreenHeight, 0.1f, 1000.0f);
 
     SDL_Event SdlEvent;
     bool ShouldQuit = false;
@@ -89,9 +89,9 @@ main(int Argc, char *Argv[])
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        mat4 ViewMat = GetLookAtMat4(vec3 { 0.0f, 0.0f, 5.0f }, vec3 { 0.0f, 0.0f, 4.0f }, vec3 { 0.0f, 1.0f, 0.0f });
+        mat4 ViewMat = GetLookAtMat(vec3 { 0.0f, 0.0f, 5.0f }, vec3 { 0.0f, 0.0f, 4.0f }, vec3 { 0.0f, 1.0f, 0.0f });
 
-        DD_DrawSphere(DDRenderData, 1.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 5, 4);
+        DD_DrawSphere(DDRenderData, 1.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 7, 8);
 
         DD_Render(DDRenderData, ProjectionMat, ViewMat);
 
@@ -103,37 +103,69 @@ main(int Argc, char *Argv[])
 }
 
 mat4
-GetProjectionMat4(f32 AspectRatio, f32 HalfFOV, f32 Near, f32 Far)
+GetPerspecitveProjectionMat(f32 FovY_Degrees, f32 AspectRatio, f32 Near, f32 Far)
 {
-    mat4 ProjectionMat { };
+    // NOTE: http://www.songho.ca/opengl/gl_projectionmatrix.html
+    mat4 Result = Mat4Identity();
 
-    //ProjectionMat
+    f32 HalfHeight = Near * TanF32(DegreesToRadians(FovY_Degrees) / 2.0f);
+    f32 HalfWidth = HalfHeight * AspectRatio;
 
-    return ProjectionMat;
+#if 0
+    f32 Left = -HalfWidth;
+    f32 Right = HalfWidth;
+    f32 Top = HalfHeight;
+    f32 Bottom = -HalfHeight;
+
+    Result.D[0][0] = 2.0f * Near / (Right - Left);
+
+    Result.D[1][1] = 2.0f * Near / (Top - Bottom);
+
+    Result.D[2][0] = (Right + Left) / (Right - Left);
+    Result.D[2][1] = (Top + Bottom) / (Top - Bottom);
+    Result.D[2][2] = -(Far + Near) / (Far - Near);
+    Result.D[2][3] = -1.0f;
+
+    Result.D[3][2] = -2.0f * Far * Near / (Far - Near);
+#else
+    // For symmetrical frustum
+    Result.D[0][0] = Near / HalfWidth;
+
+    Result.D[1][1] = Near / HalfHeight;
+
+    Result.D[2][2] = -(Far + Near) / (Far - Near);
+    Result.D[2][3] = -1.0f;
+
+    Result.D[3][2] = -2.0f * Far * Near / (Far - Near);
+#endif
+
+    return Result;
 }
 
 mat4
-GetLookAtMat4(vec3 Position, vec3 Front, vec3 Up)
+GetLookAtMat(vec3 EyePosition, vec3 TargetPoint, vec3 WorldUp)
 {
-    Front = VecNormalize(Front - Position);
-    Up = VecNormalize(Up);
-    vec3 Right = VecNormalize(CrossProduct(Front, Up));
+    mat4 Result = Mat4Identity();
+    
+    vec3 Front = VecNormalize(TargetPoint - EyePosition);
+    vec3 Right = VecNormalize(VecCrossProduct(Front, VecNormalize(WorldUp)));
+    vec3 Up = VecCrossProduct(Right, Front);
 
-    mat4 LookAtMat { };
+    Result.D[0][0] = Right.X;
+    Result.D[0][1] = Up.X;
+    Result.D[0][2] = -Front.X;
 
-    LookAtMat.D[0][0] = Right.X;
-    LookAtMat.D[0][1] = Right.Y;
-    LookAtMat.D[0][2] = Right.Z;
-    LookAtMat.D[1][0] = Up.X;
-    LookAtMat.D[1][1] = Up.Y;
-    LookAtMat.D[1][2] = Up.Z;
-    LookAtMat.D[2][0] = Front.X;
-    LookAtMat.D[2][1] = Front.Y;
-    LookAtMat.D[2][2] = Front.Z;
+    Result.D[1][0] = Right.Y;
+    Result.D[1][1] = Up.Y;
+    Result.D[1][2] = -Front.Y;
 
-    LookAtMat.D[3][0] = Position.X;
-    LookAtMat.D[3][1] = Position.Y;
-    LookAtMat.D[3][2] = Position.Z;
+    Result.D[2][0] = Right.Z;
+    Result.D[2][1] = Up.Z;
+    Result.D[2][2] = -Front.Z;
 
-    return LookAtMat;
+    Result.D[3][0] = -EyePosition.X;
+    Result.D[3][1] = -EyePosition.Y;
+    Result.D[3][2] = -EyePosition.Z;
+
+    return Result;
 }

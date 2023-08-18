@@ -6,6 +6,10 @@
 
 // NOTE: All mat functions assume Column-Major representation [Column][Row]
 
+// -------------------------------------------------------------------------------
+// VECTOR 2 ----------------------------------------------------------------------
+// -------------------------------------------------------------------------------
+
 union vec2
 {
     struct
@@ -14,36 +18,6 @@ union vec2
     };
 
     f32 D[2];
-};
-
-union vec3
-{
-    struct
-    {
-        f32 X, Y, Z;
-    };
-
-    f32 D[3];
-};
-
-union vec4
-{
-    struct
-    {
-        f32 X, Y, Z, W;
-    };
-
-    f32 D[4];
-};
-
-struct mat3
-{
-    f32 D[3][3];
-};
-
-struct mat4
-{
-    f32 D[4][4];
 };
 
 internal inline vec2
@@ -104,6 +78,45 @@ operator/=(vec2 &V, f32 S)
     return V;
 }
 
+internal inline f32
+VecDotProduct(vec2 V0, vec2 V1)
+{
+    return (V0.X * V1.X + V0.Y * V1.Y);
+}
+
+internal inline f32
+VecLengthSqr(vec2 V)
+{
+    return VecDotProduct(V, V);
+}
+
+internal inline f32
+VecLength(vec2 V)
+{
+    return SqrtF32(VecLengthSqr(V));
+}
+
+internal inline vec2
+VecNormalize(vec2 V)
+{
+    return V / VecLength(V);
+}
+
+// -------------------------------------------------------------------------------
+// VECTOR 3 ----------------------------------------------------------------------
+// -------------------------------------------------------------------------------
+
+union vec3
+{
+    struct
+    {
+        f32 X, Y, Z;
+    };
+
+    f32 D[3];
+};
+
+
 internal inline vec3
 operator+(vec3 V0, vec3 V1)
 {
@@ -131,7 +144,7 @@ operator*(f32 S, vec3 V)
 internal inline vec3
 operator/(vec3 V, f32 S)
 {
-    return vec3 { V.X * S, V.Y * S, V.Z * S };
+    return vec3 { V.X / S, V.Y / S, V.Z / S };
 }
 
 internal inline vec3 &
@@ -161,7 +174,53 @@ operator/=(vec3 &V, f32 S)
     V = V / S;
     return V;
 }
-#if 0
+
+internal inline f32
+VecDotProduct(vec3 V0, vec3 V1)
+{
+    return (V0.X * V1.X + V0.Y * V1.Y + V0.Z * V1.Z);
+}
+
+internal inline f32
+VecLengthSqr(vec3 V)
+{
+    return VecDotProduct(V, V);
+}
+
+internal inline f32
+VecLength(vec3 V)
+{
+    return SqrtF32(VecLengthSqr(V));
+}
+
+internal inline vec3
+VecNormalize(vec3 V)
+{
+    return V / VecLength(V);
+}
+
+internal inline vec3
+VecCrossProduct(vec3 V0, vec3 V1)
+{
+    return vec3 { V0.Y * V1.Z - V0.Z * V1.Y,
+        V0.Z * V1.X - V0.X * V1.Z,
+        V0.X * V1.Y - V0.Y * V1.X };
+}
+
+// -------------------------------------------------------------------------------
+// VECTOR 4 ----------------------------------------------------------------------
+// -------------------------------------------------------------------------------
+
+union vec4
+{
+    struct
+    {
+        f32 X, Y, Z, W;
+    };
+
+    f32 D[4];
+};
+
 internal inline vec4
 operator+(vec4 V0, vec4 V1);
 
@@ -189,73 +248,59 @@ operator*=(vec4 &V, f32 S);
 internal inline vec4 &
 operator/=(vec4 &V, f32 S);
 
+// -------------------------------------------------------------------------------
+// MATRIX 3 ----------------------------------------------------------------------
+// -------------------------------------------------------------------------------
+
+struct mat3
+{
+    f32 D[3][3];
+};
+
+internal inline mat3
+Mat3Identity()
+{
+    mat3 Result = {};
+
+    Result.D[0][0] = 1.0f;
+    Result.D[1][1] = 1.0f;
+    Result.D[2][2] = 1.0f;
+
+    return Result;
+}
+
 internal inline mat3
 operator*(mat3 M0, mat3 M1);
 
 internal inline mat3
 operator*(mat3 M, vec3 V);
 
+// -------------------------------------------------------------------------------
+// MATRIX 4 ----------------------------------------------------------------------
+// -------------------------------------------------------------------------------
+
+struct mat4
+{
+    f32 D[4][4];
+};
+
+internal inline mat4
+Mat4Identity()
+{
+    mat4 Result = {};
+
+    Result.D[0][0] = 1.0f;
+    Result.D[1][1] = 1.0f;
+    Result.D[2][2] = 1.0f;
+    Result.D[3][3] = 1.0f;
+
+    return Result;
+}
+
 internal inline mat4
 operator*(mat4 M0, mat4 M1);
 
 internal inline mat4
 operator*(mat4 M, vec3 V);
-#endif
-
-internal inline f32
-VecDotProduct(vec2 V0, vec2 V1)
-{
-    return (V0.X * V1.X + V0.Y * V1.Y);
-}
-
-internal inline f32
-VecLengthSqr(vec2 V)
-{
-    return VecDotProduct(V, V);
-}
-
-internal inline f32
-VecLength(vec2 V)
-{
-    return SqrtF32(VecLengthSqr(V));
-}
-
-internal inline vec2
-VecNormalize(vec2 V)
-{
-    return V / VecLength(V);
-}
-
-internal inline f32
-VecDotProduct(vec3 V0, vec3 V1)
-{
-    return (V0.X * V1.X + V0.Y * V1.Y + V0.Z * V1.Z);
-}
-
-internal inline f32
-VecLengthSqr(vec3 V)
-{
-    return VecDotProduct(V, V);
-}
-
-internal inline f32
-VecLength(vec3 V)
-{
-    return SqrtF32(VecLengthSqr(V));
-}
-
-internal inline vec3
-VecNormalize(vec3 V)
-{
-    return V / VecLength(V);
-}
-
-internal inline vec3
-CrossProduct(vec3 V0, vec3 V1)
-{
-    return vec3 { V0.Y * V1.Z - V0.Z * V1.Y,
-        V0.X * V1.Z - V0.Z * V1.X,
-        V0.X * V1.Y - V0.Y * V1.X };
-}
 
 #endif

@@ -32,4 +32,16 @@ CosF32(f32 Value)
     return cosf(Value);
 }
 
+internal inline f32
+TanF32(f32 Value)
+{
+    return tanf(Value);
+}
+
+internal inline f32
+DegreesToRadians(f32 Angle)
+{
+    return (Angle * PI32 / 180.0f);
+}
+
 #endif
