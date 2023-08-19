@@ -36,10 +36,10 @@ main(int Argc, char *Argv[])
     glEnable(GL_DEPTH_TEST);
     //glEnable(GL_CULL_FACE);
 
-    if (SDL_SetRelativeMouseMode(SDL_TRUE) != 0)
-    {
-        fprintf(stderr, "SDL Could not set mouse relative mode: %s\n", SDL_GetError());
-    }
+    //if (SDL_SetRelativeMouseMode(SDL_TRUE) != 0)
+    //{
+    //    fprintf(stderr, "SDL Could not set mouse relative mode: %s\n", SDL_GetError());
+    //}
 
     i32 ScreenWidth;
     i32 ScreenHeight;
@@ -96,45 +96,38 @@ main(int Argc, char *Argv[])
         u32 MouseButtonState = SDL_GetRelativeMouseState(&MouseDeltaX, &MouseDeltaY);
 
         f32 CameraSpeed = 5.0f;
-        f32 MouseSensitivity = 20.0f;
+        f32 CameraRotationSensitivity = 0.1f;
+        f32 CameraTranslationSensitivity = 0.01f;
 
-        vec3 CameraVelocity = {};
+        vec3 CameraTranslation = {};
         f32 CameraDeltaYaw = 0.0f;
         f32 CameraDeltaPitch = 0.0f;
-        bool CameraMoved = false;
-        if (CurrentKeyStates[SDL_SCANCODE_W])
+
+        bool MouseMoved = (MouseDeltaX != 0 || MouseDeltaY != 0);
+        bool LeftButtonPressed = (SDL_BUTTON(1) & MouseButtonState);
+        bool MiddleButtonPressed = (SDL_BUTTON(2) & MouseButtonState);
+        bool RightButtonPressed = (SDL_BUTTON(3) & MouseButtonState);
+
+        if (RightButtonPressed && MouseMoved)
         {
-            CameraVelocity.Z += 1.0f;
-            CameraMoved = true;
-        }
-        if (CurrentKeyStates[SDL_SCANCODE_S])
-        {
-            CameraVelocity.Z -= 1.0f;
-            CameraMoved = true;
-        }
-        if (CurrentKeyStates[SDL_SCANCODE_A])
-        {
-            CameraVelocity.X -= 1.0f;
-            CameraMoved = true;
-        }
-        if (CurrentKeyStates[SDL_SCANCODE_D])
-        {
-            CameraVelocity.X += 1.0f;
-            CameraMoved = true;
+            CameraDeltaYaw = (f32) MouseDeltaX * CameraRotationSensitivity;
+            CameraDeltaPitch = (f32) -MouseDeltaY * CameraRotationSensitivity;
         }
 
-        if (MouseDeltaX != 0 || MouseDeltaY != 0)
+        if (MiddleButtonPressed && MouseMoved)
         {
-            CameraDeltaYaw = ((f32) MouseDeltaX) / MouseSensitivity;
-            CameraDeltaPitch = ((f32) -MouseDeltaY) / MouseSensitivity;
-            CameraMoved = true;
+            if (CurrentKeyStates[SDL_SCANCODE_LSHIFT])
+            {
+                CameraTranslation.Z = (f32) -MouseDeltaY * CameraTranslationSensitivity;
+            }
+            else
+            {
+                CameraTranslation.X = (f32) -MouseDeltaX * CameraTranslationSensitivity;
+                CameraTranslation.Y = (f32) MouseDeltaY * CameraTranslationSensitivity;
+            }
         }
-
-        if (CameraMoved)
-        {
-            CameraVelocity = CameraSpeed * DeltaTime * VecNormalize(CameraVelocity);
-            UpdateCameraPosition(&Camera, CameraDeltaYaw, CameraDeltaPitch, CameraVelocity);
-        }
+        
+        UpdateCameraPosition(&Camera, CameraDeltaYaw, CameraDeltaPitch, CameraTranslation);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

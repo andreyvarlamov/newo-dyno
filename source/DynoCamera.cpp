@@ -8,7 +8,10 @@
 
 internal inline mat4
 GetViewMatRaw(vec3 Translation, vec3 Back, vec3 Right, vec3 Up);
-
+#if 0
+internal inline mat4
+GetViewMatAnchoredRaw(vec3 Translation, vec3 Target, vec3 Right, vec3 Up);
+#endif
 internal inline void
 CalculateCameraInternals(dyno_camera *Camera);
 
@@ -129,7 +132,41 @@ GetViewMatRaw(vec3 Translation, vec3 Front, vec3 Right, vec3 Up)
 
     return Result;
 }
+#if 0
+internal inline mat4
+GetViewMatAnchoredRaw(vec3 EyePosition, vec3 Target, vec3 Right, vec3 Up)
+{
+    // NOTE: General formula: https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml
+    // Translation optimization by dot product from GLM
 
+    vec3 TranslationToTarget = Target - EyePosition;
+    vec3 Front = VecNormalize(TranslationToTarget);
+
+    mat4 Rotation = Mat4Identity();
+    Rotation.D[0][0] =  Right.X;
+    Rotation.D[0][1] =  Up.X;
+    Rotation.D[0][2] = -Front.X;
+    Rotation.D[1][0] =  Right.Y;
+    Rotation.D[1][1] =  Up.Y;
+    Rotation.D[1][2] = -Front.Y;
+    Rotation.D[2][0] =  Right.Z;
+    Rotation.D[2][1] =  Up.Z;
+    Rotation.D[2][2] = -Front.Z;
+
+    mat4 TranslationMat = Mat4Identity();
+    TranslationMat.D[3][0] = -EyePosition.X;
+    TranslationMat.D[3][1] = -EyePosition.Y;
+    TranslationMat.D[3][2] = -EyePosition.Z;
+
+    mat4 TranslationToTargetMat = Mat4Identity();
+    TranslationToTargetMat.D[3][0] = -TranslationToTarget.X;
+    TranslationToTargetMat.D[3][1] = -TranslationToTarget.Y;
+    TranslationToTargetMat.D[3][2] = -TranslationToTarget.Z;
+
+    mat4 Result = TranslationToTargetMat * Rotation * TranslationMat;
+    return Result;
+}
+#endif
 internal inline void
 CalculateCameraInternals(dyno_camera *Camera)
 {
