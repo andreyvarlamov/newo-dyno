@@ -108,15 +108,14 @@ main(int Argc, char *Argv[])
         bool MiddleButtonPressed = (SDL_BUTTON(2) & MouseButtonState);
         bool RightButtonPressed = (SDL_BUTTON(3) & MouseButtonState);
 
-        if (RightButtonPressed && MouseMoved)
-        {
-            CameraDeltaYaw = (f32) MouseDeltaX * CameraRotationSensitivity;
-            CameraDeltaPitch = (f32) -MouseDeltaY * CameraRotationSensitivity;
-        }
-
         if (MiddleButtonPressed && MouseMoved)
         {
             if (CurrentKeyStates[SDL_SCANCODE_LSHIFT])
+            {
+                CameraDeltaYaw = (f32) MouseDeltaX * CameraRotationSensitivity;
+                CameraDeltaPitch = (f32) -MouseDeltaY * CameraRotationSensitivity;
+            }
+            else if (CurrentKeyStates[SDL_SCANCODE_LALT])
             {
                 CameraTranslation.Z = (f32) -MouseDeltaY * CameraTranslationSensitivity;
             }
