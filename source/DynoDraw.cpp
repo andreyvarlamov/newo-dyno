@@ -88,10 +88,16 @@ DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color,
         else
         {
             f32 RingRatio = ((f32) RingIndex / (f32) (RingCount - 1));
+#if 0
             f32 VerticalAngle = (PI32 / 2.0f - (PI32 * RingRatio)); // PI/2 -> -PI/2 Range
-
             f32 RingRadius = SphereRadius * CosF32(VerticalAngle);
-            f32 Y = SphereRadius * SinF32(VerticalAngle); // Radius -> -Radiu range
+            f32 Y = SphereRadius * SinF32(VerticalAngle); // Radius -> -Radius range
+#else
+            f32 Y = 1.0f - 2.0f * RingRatio;
+            f32 VerticalAngle = ArcSinF32(Y);
+            f32 RingRadius = SphereRadius * CosF32(VerticalAngle);
+            Y = Y * SphereRadius;
+#endif
 
             for (u32 SectorIndex = 0; SectorIndex < SectorCount; ++SectorIndex)
             {

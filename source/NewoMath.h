@@ -39,9 +39,15 @@ TanF32(f32 Value)
 }
 
 internal inline f32
-DegreesToRadians(f32 Angle)
+DegreesToRadians(f32 Degrees)
 {
-    return (Angle * PI32 / 180.0f);
+    return (Degrees * PI32 / 180.0f);
+}
+
+internal inline f32
+ArcSinF32(f32 Value)
+{
+    return asinf(Value);
 }
 
 #endif

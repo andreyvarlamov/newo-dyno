@@ -33,6 +33,12 @@ operator-(vec2 V0, vec2 V1)
 }
 
 internal inline vec2
+operator-(vec2 V0)
+{
+    return vec2 { -V0.X, -V0.Y };
+}
+
+internal inline vec2
 operator*(vec2 V, f32 S)
 {
     return vec2 { V.X * S, V.Y * S };
@@ -130,6 +136,12 @@ operator-(vec3 V0, vec3 V1)
 }
 
 internal inline vec3
+operator-(vec3 V0)
+{
+    return vec3 { -V0.X, -V0.Y, -V0.Z };
+}
+
+internal inline vec3
 operator*(vec3 V, f32 S)
 {
     return vec3 { V.X * S, V.Y * S, V.Z * S };
@@ -196,7 +208,8 @@ VecLength(vec3 V)
 internal inline vec3
 VecNormalize(vec3 V)
 {
-    return V / VecLength(V);
+    f32 Length = VecLength(V);
+    return ((Length != 0.0f) ? (V / Length) : V);
 }
 
 internal inline vec3
@@ -226,6 +239,9 @@ operator+(vec4 V0, vec4 V1);
 
 internal inline vec4
 operator-(vec4 V0, vec4 V1);
+
+internal inline vec4
+operator-(vec4 V0);
 
 internal inline vec4
 operator*(vec4 V, f32 S);
@@ -272,8 +288,37 @@ Mat3Identity()
 internal inline mat3
 operator*(mat3 M0, mat3 M1);
 
+internal inline vec3
+operator*(mat3 M, vec3 V)
+{
+    vec3 Result = {};
+
+    Result.X = M.D[0][0] * V.X + M.D[1][0] * V.Y + M.D[2][0] * V.Z;
+    Result.Y = M.D[0][1] * V.X + M.D[1][1] * V.Y + M.D[2][1] * V.Z;
+    Result.Z = M.D[0][2] * V.X + M.D[1][2] * V.Y + M.D[2][2] * V.Z;
+
+    return Result;
+}
+
 internal inline mat3
-operator*(mat3 M, vec3 V);
+Mat3FromVec3Columns(vec3 A, vec3 B, vec3 C)
+{
+    mat3 Result = {};
+
+    Result.D[0][0] = A.X;
+    Result.D[0][1] = A.Y;
+    Result.D[0][2] = A.Z;
+
+    Result.D[1][0] = B.X;
+    Result.D[1][1] = B.Y;
+    Result.D[1][2] = B.Z;
+
+    Result.D[2][0] = C.X;
+    Result.D[2][1] = C.Y;
+    Result.D[2][2] = C.Z;
+
+    return Result;
+}
 
 // -------------------------------------------------------------------------------
 // MATRIX 4 ----------------------------------------------------------------------
@@ -300,7 +345,7 @@ Mat4Identity()
 internal inline mat4
 operator*(mat4 M0, mat4 M1);
 
-internal inline mat4
-operator*(mat4 M, vec3 V);
+internal inline vec4
+operator*(mat4 M, vec4 V);
 
 #endif

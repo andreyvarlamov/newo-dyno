@@ -21,7 +21,8 @@
     <ClCompile Include="..\..\source\DynoDraw.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\NewoMath.cpp">
+    <ClCompile Include="..\..\source\NewoGeometry.cpp" />
+    <ClCompile Include="..\..\source\DynoCamera.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
@@ -39,6 +40,11 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\source\DynoDraw.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\NewoGeometry.h" />
+    <ClInclude Include="..\..\source\NewoLinearMath.h" />
+    <ClInclude Include="..\..\source\DynoCamera.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

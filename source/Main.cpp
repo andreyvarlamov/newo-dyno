@@ -7,13 +7,8 @@
 #include "NewoCommon.h"
 #include "NewoLinearMath.h"
 #include "NewoMemory.h"
+#include "DynoCamera.h"
 #include "DynoDraw.h"
-
-mat4
-GetPerspecitveProjectionMat(f32 FovY_Degrees, f32 AspectRatio, f32 Near, f32 Far);
-
-mat4
-GetLookAtMat(vec3 Position, vec3 Front, vec3 Up);
 
 int
 main(int Argc, char *Argv[])
@@ -39,12 +34,20 @@ main(int Argc, char *Argv[])
     printf("Version: %s\n", glGetString(GL_VERSION));
 
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
+    //glEnable(GL_CULL_FACE);
+
+    if (SDL_SetRelativeMouseMode(SDL_TRUE) != 0)
+    {
+        fprintf(stderr, "SDL Could not set mouse relative mode: %s\n", SDL_GetError());
+    }
 
     i32 ScreenWidth;
     i32 ScreenHeight;
     SDL_GetWindowSize(Window, &ScreenWidth, &ScreenHeight);
     glViewport(0, 0, ScreenWidth, ScreenHeight);
+
+    f32 MonitorRefreshRate = 164.836f; // Hardcode from my display settings for now
+    f32 DeltaTime = 1.0f / MonitorRefreshRate;
 
     size_t ApplicationMemorySize = Megabytes(64);
     void *ApplicationMemory = calloc(1, ApplicationMemorySize);
@@ -55,6 +58,8 @@ main(int Argc, char *Argv[])
     Assert(DDArenaSize >= sizeof(dd_render_data));
     InitializeMemoryArena(&DDArena, DDArenaSize, (u8 *) ApplicationMemory);
     dd_render_data *DDRenderData = DD_InitializeRenderData(&DDArena);
+
+    dyno_camera Camera = InitializeCamera(vec3 { 0.0f, 0.0f, 5.0f }, -90.0f, 0.0f);
 
     mat4 ProjectionMat = GetPerspecitveProjectionMat(90.0f, (f32) ScreenWidth / (f32) ScreenHeight, 0.1f, 1000.0f);
 
@@ -86,12 +91,58 @@ main(int Argc, char *Argv[])
             ShouldQuit = true;
         }
 
+        i32 MouseDeltaX;
+        i32 MouseDeltaY;
+        u32 MouseButtonState = SDL_GetRelativeMouseState(&MouseDeltaX, &MouseDeltaY);
+
+        f32 CameraSpeed = 5.0f;
+        f32 MouseSensitivity = 20.0f;
+
+        vec3 CameraVelocity = {};
+        f32 CameraDeltaYaw = 0.0f;
+        f32 CameraDeltaPitch = 0.0f;
+        bool CameraMoved = false;
+        if (CurrentKeyStates[SDL_SCANCODE_W])
+        {
+            CameraVelocity.Z += 1.0f;
+            CameraMoved = true;
+        }
+        if (CurrentKeyStates[SDL_SCANCODE_S])
+        {
+            CameraVelocity.Z -= 1.0f;
+            CameraMoved = true;
+        }
+        if (CurrentKeyStates[SDL_SCANCODE_A])
+        {
+            CameraVelocity.X -= 1.0f;
+            CameraMoved = true;
+        }
+        if (CurrentKeyStates[SDL_SCANCODE_D])
+        {
+            CameraVelocity.X += 1.0f;
+            CameraMoved = true;
+        }
+
+        if (MouseDeltaX != 0 || MouseDeltaY != 0)
+        {
+            CameraDeltaYaw = ((f32) MouseDeltaX) / MouseSensitivity;
+            CameraDeltaPitch = ((f32) -MouseDeltaY) / MouseSensitivity;
+            CameraMoved = true;
+        }
+
+        if (CameraMoved)
+        {
+            CameraVelocity = CameraSpeed * DeltaTime * VecNormalize(CameraVelocity);
+            UpdateCameraPosition(&Camera, CameraDeltaYaw, CameraDeltaPitch, CameraVelocity);
+        }
+
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        mat4 ViewMat = GetLookAtMat(vec3 { 0.0f, 0.0f, 5.0f }, vec3 { 0.0f, 0.0f, 4.0f }, vec3 { 0.0f, 1.0f, 0.0f });
+        mat4 ViewMat = GetCameraViewMat(&Camera);
 
-        DD_DrawSphere(DDRenderData, 1.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 7, 8);
+        DD_DrawSphere(DDRenderData, 3.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 5, 4);
+        //DD_DrawSphere(DDRenderData, 1.0f, vec3 { 5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 7, 8);
 
         DD_Render(DDRenderData, ProjectionMat, ViewMat);
 
@@ -100,72 +151,4 @@ main(int Argc, char *Argv[])
 
     SDL_Quit();
     return 0;
-}
-
-mat4
-GetPerspecitveProjectionMat(f32 FovY_Degrees, f32 AspectRatio, f32 Near, f32 Far)
-{
-    // NOTE: http://www.songho.ca/opengl/gl_projectionmatrix.html
-    mat4 Result = Mat4Identity();
-
-    f32 HalfHeight = Near * TanF32(DegreesToRadians(FovY_Degrees) / 2.0f);
-    f32 HalfWidth = HalfHeight * AspectRatio;
-
-#if 0
-    f32 Left = -HalfWidth;
-    f32 Right = HalfWidth;
-    f32 Top = HalfHeight;
-    f32 Bottom = -HalfHeight;
-
-    Result.D[0][0] = 2.0f * Near / (Right - Left);
-
-    Result.D[1][1] = 2.0f * Near / (Top - Bottom);
-
-    Result.D[2][0] = (Right + Left) / (Right - Left);
-    Result.D[2][1] = (Top + Bottom) / (Top - Bottom);
-    Result.D[2][2] = -(Far + Near) / (Far - Near);
-    Result.D[2][3] = -1.0f;
-
-    Result.D[3][2] = -2.0f * Far * Near / (Far - Near);
-#else
-    // For symmetrical frustum
-    Result.D[0][0] = Near / HalfWidth;
-
-    Result.D[1][1] = Near / HalfHeight;
-
-    Result.D[2][2] = -(Far + Near) / (Far - Near);
-    Result.D[2][3] = -1.0f;
-
-    Result.D[3][2] = -2.0f * Far * Near / (Far - Near);
-#endif
-
-    return Result;
-}
-
-mat4
-GetLookAtMat(vec3 EyePosition, vec3 TargetPoint, vec3 WorldUp)
-{
-    mat4 Result = Mat4Identity();
-    
-    vec3 Front = VecNormalize(TargetPoint - EyePosition);
-    vec3 Right = VecNormalize(VecCrossProduct(Front, VecNormalize(WorldUp)));
-    vec3 Up = VecCrossProduct(Right, Front);
-
-    Result.D[0][0] = Right.X;
-    Result.D[0][1] = Up.X;
-    Result.D[0][2] = -Front.X;
-
-    Result.D[1][0] = Right.Y;
-    Result.D[1][1] = Up.Y;
-    Result.D[1][2] = -Front.Y;
-
-    Result.D[2][0] = Right.Z;
-    Result.D[2][1] = Up.Z;
-    Result.D[2][2] = -Front.Z;
-
-    Result.D[3][0] = -EyePosition.X;
-    Result.D[3][1] = -EyePosition.Y;
-    Result.D[3][2] = -EyePosition.Z;
-
-    return Result;
 }
