@@ -80,6 +80,7 @@ main(int Argc, char *Argv[])
                     i32 Width = SdlEvent.window.data1;
                     i32 Height = SdlEvent.window.data2;
                     glViewport(0, 0, Width, Height);
+                    ProjectionMat = GetPerspecitveProjectionMat(90.0f, (f32) Width / (f32) Height, 0.1f, 1000.0f);
                 }
                 break;
             }
@@ -112,8 +113,8 @@ main(int Argc, char *Argv[])
         {
             if (CurrentKeyStates[SDL_SCANCODE_LSHIFT])
             {
-                CameraDeltaYaw = (f32) MouseDeltaX * CameraRotationSensitivity;
-                CameraDeltaPitch = (f32) -MouseDeltaY * CameraRotationSensitivity;
+                CameraTranslation.X = (f32) -MouseDeltaX * CameraTranslationSensitivity;
+                CameraTranslation.Y = (f32) MouseDeltaY * CameraTranslationSensitivity;
             }
             else if (CurrentKeyStates[SDL_SCANCODE_LALT])
             {
@@ -121,8 +122,8 @@ main(int Argc, char *Argv[])
             }
             else
             {
-                CameraTranslation.X = (f32) -MouseDeltaX * CameraTranslationSensitivity;
-                CameraTranslation.Y = (f32) MouseDeltaY * CameraTranslationSensitivity;
+                CameraDeltaYaw = (f32) MouseDeltaX * CameraRotationSensitivity;
+                CameraDeltaPitch = (f32) -MouseDeltaY * CameraRotationSensitivity;
             }
         }
         
