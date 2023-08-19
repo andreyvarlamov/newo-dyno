@@ -286,7 +286,22 @@ Mat3Identity()
 }
 
 internal inline mat3
-operator*(mat3 M0, mat3 M1);
+operator*(mat3 M0, mat3 M1)
+{
+    mat3 Result = {};
+
+    for (i32 I = 0; I < 3; ++I)
+    {
+        for (i32 J = 0; J < 3; ++J)
+        {
+            Result.D[J][I] = (M0.D[0][I]*M1.D[J][0] +
+                              M0.D[1][I]*M1.D[J][1] +
+                              M0.D[2][I]*M1.D[J][2]);
+        }
+    }
+
+    return Result;
+}
 
 internal inline vec3
 operator*(mat3 M, vec3 V)
@@ -343,9 +358,35 @@ Mat4Identity()
 }
 
 internal inline mat4
-operator*(mat4 M0, mat4 M1);
+operator*(mat4 M0, mat4 M1)
+{
+    mat4 Result = {};
+
+    for (i32 I = 0; I < 4; ++I)
+    {
+        for (i32 J = 0; J < 4; ++J)
+        {
+            Result.D[J][I] = (M0.D[0][I]*M1.D[J][0] +
+                              M0.D[1][I]*M1.D[J][1] +
+                              M0.D[2][I]*M1.D[J][2] +
+                              M0.D[3][I]*M1.D[J][3]);
+        }
+    }
+
+    return Result;
+}
 
 internal inline vec4
-operator*(mat4 M, vec4 V);
+operator*(mat4 M, vec4 V)
+{
+    vec4 Result = {};
+
+    Result.X = M.D[0][0] * V.X + M.D[1][0] * V.Y + M.D[2][0] * V.Z + M.D[3][0] * V.W;
+    Result.Y = M.D[0][1] * V.X + M.D[1][1] * V.Y + M.D[2][1] * V.Z + M.D[3][1] * V.W;
+    Result.Z = M.D[0][2] * V.X + M.D[1][2] * V.Y + M.D[2][2] * V.Z + M.D[3][2] * V.W;
+    Result.W = M.D[0][2] * V.X + M.D[1][2] * V.Y + M.D[2][2] * V.Z + M.D[3][3] * V.W;
+
+    return Result;
+}
 
 #endif

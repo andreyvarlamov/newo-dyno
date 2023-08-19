@@ -51,12 +51,6 @@ UpdateCameraPosition(dyno_camera *Camera, f32 DeltaYaw, f32 DeltaPitch, vec3 Loc
 
     CalculateCameraInternals(Camera);
 
-    printf("Yaw: %.3f, Pitch: %.3f, Front: {%.3f, %.3f, %.3f}, Right: {%.3f, %.3f, %.3f}, Up: {%.3f, %.3f, %.3f}\n",
-           Camera->Yaw, Camera->Pitch,
-           Camera->_Front.X, Camera->_Front.Y, Camera->_Front.Z,
-           Camera->_Right.X, Camera->_Right.Y, Camera->_Right.Z,
-           Camera->_Up.X, Camera->_Up.Y, Camera->_Up.Z);
-
     mat3 LocalToWorld = Mat3FromVec3Columns(Camera->_Right, Camera->_Up, Camera->_Front);
     
     Camera->Position += LocalToWorld * LocalDeltaPosition;
@@ -65,9 +59,7 @@ UpdateCameraPosition(dyno_camera *Camera, f32 DeltaYaw, f32 DeltaPitch, vec3 Loc
 mat4
 GetCameraViewMat(dyno_camera *Camera)
 {
-    // NOTE: Front vector is flipped, because the view matrix expects "back" vector, because the coordinate system
-    // we're using for the world is right-handed. Only the camera's internal coordinate system is left-handed.
-    mat4 Result = GetViewMatRaw(Camera->Position, -Camera->_Front, Camera->_Right, Camera->_Up);
+    mat4 Result = GetViewMatRaw(Camera->Position, Camera->_Front, Camera->_Right, Camera->_Up);
     return Result;
 }
 
@@ -85,26 +77,19 @@ GetPerspecitveProjectionMat(f32 FovY_Degrees, f32 AspectRatio, f32 Near, f32 Far
     f32 Right = HalfWidth;
     f32 Top = HalfHeight;
     f32 Bottom = -HalfHeight;
-
     Result.D[0][0] = 2.0f * Near / (Right - Left);
-
     Result.D[1][1] = 2.0f * Near / (Top - Bottom);
-
     Result.D[2][0] = (Right + Left) / (Right - Left);
     Result.D[2][1] = (Top + Bottom) / (Top - Bottom);
     Result.D[2][2] = -(Far + Near) / (Far - Near);
     Result.D[2][3] = -1.0f;
-
     Result.D[3][2] = -2.0f * Far * Near / (Far - Near);
 #else
-    // For symmetrical frustum
-    Result.D[0][0] = Near / HalfWidth;
-
-    Result.D[1][1] = Near / HalfHeight;
-
+    // NOTE: This is assuming symmetrical frustum
+    Result.D[0][0] = Near / HalfWidth; // Near / (Near * Tan... * AR)
+    Result.D[1][1] = Near / HalfHeight; // Near / (Near * Tan...)
     Result.D[2][2] = -(Far + Near) / (Far - Near);
     Result.D[2][3] = -1.0f;
-
     Result.D[3][2] = -2.0f * Far * Near / (Far - Near);
 #endif
 
@@ -114,49 +99,33 @@ GetPerspecitveProjectionMat(f32 FovY_Degrees, f32 AspectRatio, f32 Near, f32 Far
 mat4
 GetViewMat(vec3 EyePosition, vec3 TargetPoint, vec3 WorldUp)
 {
-    vec3 Back = VecNormalize(EyePosition - TargetPoint);
-    vec3 Right = VecNormalize(VecCrossProduct(VecNormalize(WorldUp), Back));
-    vec3 Up = VecCrossProduct(Back, Right);
+    vec3 Front = VecNormalize(TargetPoint - EyePosition);
+    vec3 Right = VecNormalize(VecCrossProduct(VecNormalize(WorldUp), Front));
+    vec3 Up = VecCrossProduct(Front, Right);
 
-    mat4 Result = GetViewMatRaw(EyePosition, Back, Right, Up);
+    mat4 Result = GetViewMatRaw(EyePosition, Front, Right, Up);
     return Result;
 }
 
 internal inline mat4
-GetViewMatRaw(vec3 Translation, vec3 Back, vec3 Right, vec3 Up)
+GetViewMatRaw(vec3 Translation, vec3 Front, vec3 Right, vec3 Up)
 {
+    // NOTE: General formula: https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml
+    // Translation optimization by dot product from GLM
     mat4 Result = Mat4Identity();
 
-#if 0
-    Result.D[0][0] = Right.X;
-    Result.D[0][1] = Up.X;
-    Result.D[0][2] = Back.X;
-
-    Result.D[1][0] = Right.Y;
-    Result.D[1][1] = Up.Y;
-    Result.D[1][2] = Back.Y;
-
-    Result.D[2][0] = Right.Z;
-    Result.D[2][1] = Up.Z;
-    Result.D[2][2] = Back.Z;
-#endif
-
-    Result.D[0][0] = Right.X;
-    Result.D[1][0] = Up.X;
-    Result.D[2][0] = Back.X;
-
-    Result.D[0][1] = Right.Y;
-    Result.D[1][1] = Up.Y;
-    Result.D[2][1] = Back.Y;
-
-    Result.D[0][2] = Right.Z;
-    Result.D[1][2] = Up.Z;
-    Result.D[2][2] = Back.Z;
-
-
-    Result.D[3][0] = -Translation.X;
-    Result.D[3][1] = -Translation.Y;
-    Result.D[3][2] = -Translation.Z;
+    Result.D[0][0] =  Right.X;
+    Result.D[0][1] =  Up.X;
+    Result.D[0][2] = -Front.X;
+    Result.D[1][0] =  Right.Y;
+    Result.D[1][1] =  Up.Y;
+    Result.D[1][2] = -Front.Y;
+    Result.D[2][0] =  Right.Z;
+    Result.D[2][1] =  Up.Z;
+    Result.D[2][2] = -Front.Z;
+    Result.D[3][0] = -VecDotProduct(Right, Translation);
+    Result.D[3][1] = -VecDotProduct(Up, Translation);
+    Result.D[3][2] =  VecDotProduct(Front, Translation);
 
     return Result;
 }
@@ -170,6 +139,7 @@ CalculateCameraInternals(dyno_camera *Camera)
     Camera->_Front.X = CosF32(PitchRad) * CosF32(YawRad);
     Camera->_Front.Y = SinF32(PitchRad);
     Camera->_Front.Z = CosF32(PitchRad) * SinF32(YawRad);
+    Camera->_Front = VecNormalize(Camera->_Front);
     // NOTE: For the calculation of the camera position, flip Z-axis and make the coordinate system left-handed
     // as opposed to right-handed. Because we want the camera to move in the direction of the front vector
     // when going forward. But in right-handed system, in which the world is, forward, into the screen, is negative Z.
