@@ -59,7 +59,9 @@ main(int Argc, char *Argv[])
     InitializeMemoryArena(&DDArena, DDArenaSize, (u8 *) ApplicationMemory);
     dd_render_data *DDRenderData = DD_InitializeRenderData(&DDArena);
 
-    dyno_camera Camera = InitializeCamera(vec3 { 0.0f, 0.0f, 10.0f }, 10.0f, 0.0f, 90.0f);
+    dyno_camera Camera = InitializeCamera(vec3 { 0.0f, 0.0f, 10.0f }, 10.0f, 0.0f, 90.0f, false);
+
+    bool CameraLookAroundButtonPressed = false;
 
     SDL_Event SdlEvent;
     bool ShouldQuit = false;
@@ -131,6 +133,16 @@ main(int Argc, char *Argv[])
         UpdateCameraOrientation(&Camera, CameraDeltaRadius, CameraDeltaTheta, CameraDeltaPhi);
         UpdateCameraPosition(&Camera, CameraTranslation);
 
+        if (CurrentKeyStates[SDL_SCANCODE_HOME] && !CameraLookAroundButtonPressed)
+        {
+            Camera.IsLookAround = !Camera.IsLookAround;
+            CameraLookAroundButtonPressed = true;
+        }
+        else if (!CurrentKeyStates[SDL_SCANCODE_HOME])
+        {
+            CameraLookAroundButtonPressed = false;
+        }
+
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -149,7 +161,7 @@ main(int Argc, char *Argv[])
         DD_DrawAABox(DDRenderData, vec3 { -5.0f, 0.0f, 0.0f }, vec3 { 0.5f, 0.5f, 0.5f }, vec3 { 0.0f, 0.0f, 1.0f });
         DD_DrawAABox(DDRenderData, vec3 { -7.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.5f, 0.5f }, vec3 { 1.0f, 0.0f, 1.0f });
         
-        mat4 ProjectionMat = GetPerspecitveProjectionMat(90.0f, (f32) ScreenWidth / (f32) ScreenHeight, 0.1f, 1000.0f);
+        mat4 ProjectionMat = GetPerspecitveProjectionMat(70.0f, (f32) ScreenWidth / (f32) ScreenHeight, 0.1f, 1000.0f);
         mat4 ViewMat = GetCameraViewMat(&Camera);
         DD_Render(DDRenderData, ProjectionMat, ViewMat);
 

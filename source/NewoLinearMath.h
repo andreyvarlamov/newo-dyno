@@ -220,23 +220,6 @@ VecCrossProduct(vec3 V0, vec3 V1)
         V0.X * V1.Y - V0.Y * V1.X };
 }
 
-internal inline vec3
-VecSphericalToCartesian(f32 Theta, f32 Phi)
-{
-    // NOTE: Using coordinate system ZXY; Theta = Angle from axis Z in direction of X (CCW);
-    // Phi = Angle from axis Y in direction ZX plane (CW, from top to down)
-    vec3 Result = {};
-
-    f32 ThetaRads = DegreesToRadians(Theta);
-    f32 PhiRads = DegreesToRadians(Phi);
-
-    Result.X = SinF32(PhiRads) * SinF32(ThetaRads);
-    Result.Y = CosF32(PhiRads);
-    Result.Z = SinF32(PhiRads) * CosF32(ThetaRads);
-
-    return Result;
-}
-
 // -------------------------------------------------------------------------------
 // VECTOR 4 ----------------------------------------------------------------------
 // -------------------------------------------------------------------------------

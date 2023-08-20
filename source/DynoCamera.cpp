@@ -3,11 +3,12 @@
 #include <cstdio>
 
 #include "NewoCommon.h"
+#include "NewoGeometry.h"
 #include "NewoMath.h"
 #include "NewoLinearMath.h"
 
 dyno_camera
-InitializeCamera(vec3 Position, f32 Radius, f32 Theta, f32 Phi)
+InitializeCamera(vec3 Position, f32 Radius, f32 Theta, f32 Phi, bool IsLookAround)
 {
     dyno_camera Result = {};
 
@@ -15,7 +16,7 @@ InitializeCamera(vec3 Position, f32 Radius, f32 Theta, f32 Phi)
     Result.Radius = ((Radius > 1.0f) ? Radius : 1.0f);
     Result.Theta = Theta;
     Result.Phi = Phi;
-    Result.IsLookAround = false;
+    Result.IsLookAround = IsLookAround;
 
     return Result;
 }
