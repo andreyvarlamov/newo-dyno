@@ -63,6 +63,12 @@ main(int Argc, char *Argv[])
 
     bool CameraLookAroundButtonPressed = false;
 
+    bool CursorGotSwitched = true;
+    bool CurrentArrow = true;
+
+    SDL_Cursor *ArrowCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+    SDL_Cursor *SizeAllCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
+
     SDL_Event SdlEvent;
     bool ShouldQuit = false;
     while (!ShouldQuit)
@@ -94,6 +100,10 @@ main(int Argc, char *Argv[])
         i32 MouseDeltaX;
         i32 MouseDeltaY;
         u32 MouseButtonState = SDL_GetRelativeMouseState(&MouseDeltaX, &MouseDeltaY);
+
+        i32 MouseX;
+        i32 MouseY;
+        SDL_GetMouseState(&MouseX, &MouseY);
 
         f32 CameraRotationSensitivity = 0.1f;
         f32 CameraTranslationSensitivity = 0.01f;
@@ -143,6 +153,20 @@ main(int Argc, char *Argv[])
             CameraLookAroundButtonPressed = false;
         }
 
+        if ((MouseX > ((ScreenWidth / 2) - 5)) &&
+            (MouseX < ((ScreenWidth / 2) + 5)) &&
+            (MouseY > ((ScreenHeight / 2) - 5)) &&
+            (MouseY < ((ScreenHeight / 2) + 5)))
+        {
+            SDL_SetCursor(SizeAllCursor);
+            CursorGotSwitched = true;
+        }
+        else if (CursorGotSwitched)
+        {
+            SDL_SetCursor(ArrowCursor);
+            CursorGotSwitched = false;
+        }
+
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -156,7 +180,7 @@ main(int Argc, char *Argv[])
         DD_DrawDot(DDRenderData, CameraTargetPosition, vec3 { 1.0f, 0.7f, 0.0f });
 
         // Primitives
-        DD_DrawSphere(DDRenderData, 4.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 9, 10);
+        DD_DrawSphere(DDRenderData, 4.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 29, 30);
         DD_DrawSphere(DDRenderData, 1.0f, vec3 { 5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.0f, 0.0f }, 9, 10);
         DD_DrawAABox(DDRenderData, vec3 { -5.0f, 0.0f, 0.0f }, vec3 { 0.5f, 0.5f, 0.5f }, vec3 { 0.0f, 0.0f, 1.0f });
         DD_DrawAABox(DDRenderData, vec3 { -7.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.5f, 0.5f }, vec3 { 1.0f, 0.0f, 1.0f });
