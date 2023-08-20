@@ -60,7 +60,7 @@ main(int Argc, char *Argv[])
     dd_render_data *DDRenderData = DD_InitializeRenderData(&DDArena);
 
     //dyno_camera Camera = InitializeCameraLookAround(vec3 { 0.0f, 0.0f, 0.660f }, 272.50f, 76.3f);
-    dyno_camera Camera = InitializeCamera(vec3 { 0.0f, 0.0f, 0.0f }, 10.0f, 0.0f, 90.0f);
+    dyno_camera Camera = InitializeCamera(vec3 { 0.0f, 0.0f, 10.0f }, 1.0f, 0.0f, 90.0f);
 
     mat4 ProjectionMat = GetPerspecitveProjectionMat(90.0f, (f32) ScreenWidth / (f32) ScreenHeight, 0.1f, 1000.0f);
 
@@ -137,15 +137,16 @@ main(int Argc, char *Argv[])
         }
 #endif
         
-        UpdateCameraPosition(&Camera, CameraTranslation, 0.0f, CameraDeltaTheta, CameraDeltaPhi);
+        UpdateCameraOrientation(&Camera, 0.0f, CameraDeltaTheta, CameraDeltaPhi);
+        UpdateCameraPosition(&Camera, CameraTranslation);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         mat4 ViewMat = GetCameraViewMat(&Camera);
 
-        DD_DrawSphere(DDRenderData, 4.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 9, 10);
-        DD_DrawSphere(DDRenderData, 1.0f, vec3 { 5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.0f, 0.0f }, 9, 10);
+        DD_DrawSphere(DDRenderData, 1.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 9, 10);
+        //DD_DrawSphere(DDRenderData, 1.0f, vec3 { 5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.0f, 0.0f }, 9, 10);
 
         DD_Render(DDRenderData, ProjectionMat, ViewMat);
 

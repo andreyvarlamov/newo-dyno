@@ -7,21 +7,23 @@
 #include "NewoLinearMath.h"
 
 dyno_camera
-InitializeCamera(vec3 Target, f32 Radius, f32 Theta, f32 Phi)
+InitializeCamera(vec3 Position, f32 Radius, f32 Theta, f32 Phi)
 {
     dyno_camera Result = {};
 
-    Result.Target = Target;
-    Result.Radius = Radius;
+    Result.Position = Position;
+    Result.Radius = ((Radius > 1.0f) ? Radius : 1.0f);
     Result.Theta = Theta;
     Result.Phi = Phi;
+    Result.IsLookAround = false;
 
     return Result;
 }
 
 void
-UpdateCameraPosition(dyno_camera *Camera, vec3 DeltaPositionLocal, f32 DeltaRadius, f32 DeltaTheta, f32 DeltaPhi)
+UpdateCameraOrientation(dyno_camera *Camera, f32 DeltaRadius, f32 DeltaTheta, f32 DeltaPhi)
 {
+    f32 OldTheta = Camera->Theta;
     Camera->Theta += DeltaTheta;
     if (Camera->Theta < 0.0f)
     {
@@ -32,6 +34,7 @@ UpdateCameraPosition(dyno_camera *Camera, vec3 DeltaPositionLocal, f32 DeltaRadi
         Camera->Theta -= 360.0f;
     }
 
+    f32 OldPhi = Camera->Phi;
     Camera->Phi += DeltaPhi;
     if (Camera->Phi > 179.0f)
     {
@@ -42,36 +45,46 @@ UpdateCameraPosition(dyno_camera *Camera, vec3 DeltaPositionLocal, f32 DeltaRadi
         Camera->Phi = 1.0f;
     }
 
+    f32 OldRadius = Camera->Radius;
     Camera->Radius += DeltaRadius;
-    if (Camera->Radius < 0.0f)
+    if (Camera->Radius < 1.0f)
     {
-        Camera->Radius = 0.0f;
+        Camera->Radius = 1.0f;
     }
-
-    if (Camera->Radius > 0.0f)
+    
+    if (!Camera->IsLookAround)
     {
-        vec3 Front = -VecSphericalToCartesian(Camera->Theta, Camera->Phi);
-        vec3 Right = VecCrossProduct(Front, vec3 { 0.0f, 1.0f, 0.0f });
-        vec3 Up = VecCrossProduct(Right, Front);
-
-        mat3 LocalToWorld = Mat3FromVec3Columns(Right, Up, Front);
-
-        Camera->Target += LocalToWorld * DeltaPositionLocal;
+        vec3 TranslationFromOldPositionToTarget = OldRadius * -VecSphericalToCartesian(OldTheta, OldPhi);
+        vec3 TranslationFromTargetToNewPosition = Camera->Radius * VecSphericalToCartesian(Camera->Theta, Camera->Phi);
+        Camera->Position += TranslationFromOldPositionToTarget + TranslationFromTargetToNewPosition;
     }
-    else
-    {
-        Assert(false);
-    }
+}
+
+void
+UpdateCameraPosition(dyno_camera *Camera, vec3 DeltaPositionLocal)
+{
+    vec3 Front = -VecSphericalToCartesian(Camera->Theta, Camera->Phi);
+    vec3 Right = VecCrossProduct(Front, vec3 { 0.0f, 1.0f, 0.0f });
+    vec3 Up = VecCrossProduct(Right, Front);
+    mat3 LocalToWorld = Mat3FromVec3Columns(Right, Up, Front);
+    Camera->Position += LocalToWorld * DeltaPositionLocal;
 }
 
 mat4
 GetCameraViewMat(dyno_camera *Camera)
 {
-    vec3 CartesianDirection = VecSphericalToCartesian(Camera->Theta, Camera->Phi);
-    vec3 CameraTranslationFromTarget = Camera->Radius * CartesianDirection;
-    vec3 CameraPosition = Camera->Target + CameraTranslationFromTarget;
+    vec3 Front = -VecSphericalToCartesian(Camera->Theta, Camera->Phi);
+    vec3 CameraTarget;
+    if (Camera->IsLookAround)
+    {
+        CameraTarget = Camera->Position + Front;
+    }
+    else
+    {
+        CameraTarget = Camera->Position + Camera->Radius * Front;
+    }
 
-    mat4 Result = GetViewMat(CameraPosition, Camera->Target, vec3 { 0.0f, 1.0f, 0.0f });
+    mat4 Result = GetViewMat(Camera->Position, CameraTarget, vec3 { 0.0f, 1.0f, 0.0f });
     return Result;
 }
 

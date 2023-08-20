@@ -7,17 +7,21 @@
 
 struct dyno_camera
 {
-    vec3 Target;
+    vec3 Position;
     f32 Radius;
     f32 Theta;
     f32 Phi;
+    bool IsLookAround;
 };
 
 dyno_camera
-InitializeCamera(vec3 Target, f32 Radius, f32 Theta, f32 Phi);
+InitializeCamera(vec3 Position, f32 Radius, f32 Theta, f32 Phi);
 
 void
-UpdateCameraPosition(dyno_camera *Camera, vec3 DeltaPositionLocal, f32 DeltaRadius, f32 DeltaTheta, f32 DeltaPhi);
+UpdateCameraOrientation(dyno_camera *Camera, f32 DeltaRadius, f32 DeltaTheta, f32 DeltaPhi);
+
+void
+UpdateCameraPosition(dyno_camera *Camera, vec3 DeltaPositionLocal);
 
 mat4
 GetCameraViewMat(dyno_camera *Camera);
