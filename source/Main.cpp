@@ -34,7 +34,7 @@ main(int Argc, char *Argv[])
     printf("Version: %s\n", glGetString(GL_VERSION));
 
     glEnable(GL_DEPTH_TEST);
-    //glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
 
     //if (SDL_SetRelativeMouseMode(SDL_TRUE) != 0)
     //{
@@ -61,8 +61,6 @@ main(int Argc, char *Argv[])
 
     dyno_camera Camera = InitializeCamera(vec3 { 0.0f, 0.0f, 10.0f }, 10.0f, 0.0f, 90.0f);
 
-    mat4 ProjectionMat = GetPerspecitveProjectionMat(90.0f, (f32) ScreenWidth / (f32) ScreenHeight, 0.1f, 1000.0f);
-
     SDL_Event SdlEvent;
     bool ShouldQuit = false;
     while (!ShouldQuit)
@@ -77,10 +75,9 @@ main(int Argc, char *Argv[])
             case SDL_WINDOWEVENT:
                 if (SdlEvent.window.event == SDL_WINDOWEVENT_RESIZED)
                 {
-                    i32 Width = SdlEvent.window.data1;
-                    i32 Height = SdlEvent.window.data2;
-                    glViewport(0, 0, Width, Height);
-                    ProjectionMat = GetPerspecitveProjectionMat(90.0f, (f32) Width / (f32) Height, 0.1f, 1000.0f);
+                    ScreenWidth = SdlEvent.window.data1;
+                    ScreenHeight = SdlEvent.window.data2;
+                    glViewport(0, 0, ScreenWidth, ScreenHeight);
                 }
                 break;
             }
@@ -96,7 +93,6 @@ main(int Argc, char *Argv[])
         i32 MouseDeltaY;
         u32 MouseButtonState = SDL_GetRelativeMouseState(&MouseDeltaX, &MouseDeltaY);
 
-        f32 CameraSpeed = 5.0f;
         f32 CameraRotationSensitivity = 0.1f;
         f32 CameraTranslationSensitivity = 0.01f;
 
@@ -143,13 +139,18 @@ main(int Argc, char *Argv[])
         DD_DrawVector(DDRenderData, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 0.0f, 5.0f, 0.0f }, vec3 { 0.0f, 1.0f, 0.0f });
         DD_DrawVector(DDRenderData, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 0.0f, 0.0f, 5.0f }, vec3 { 0.0f, 0.0f, 1.0f });
 
-        mat4 ViewMat = GetCameraViewMat(&Camera);
-
+        // Camera data
         vec3 CameraTargetPosition = GetCameraTarget(&Camera); // Lol this just puts a dot in the middle of the screen. Nice one!
         DD_DrawDot(DDRenderData, CameraTargetPosition, vec3 { 1.0f, 0.7f, 0.0f });
+
+        // Primitives
         DD_DrawSphere(DDRenderData, 4.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 9, 10);
         DD_DrawSphere(DDRenderData, 1.0f, vec3 { 5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.0f, 0.0f }, 9, 10);
-
+        DD_DrawAABox(DDRenderData, vec3 { -5.0f, 0.0f, 0.0f }, vec3 { 0.5f, 0.5f, 0.5f }, vec3 { 0.0f, 0.0f, 1.0f });
+        DD_DrawAABox(DDRenderData, vec3 { -7.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.5f, 0.5f }, vec3 { 1.0f, 0.0f, 1.0f });
+        
+        mat4 ProjectionMat = GetPerspecitveProjectionMat(90.0f, (f32) ScreenWidth / (f32) ScreenHeight, 0.1f, 1000.0f);
+        mat4 ViewMat = GetCameraViewMat(&Camera);
         DD_Render(DDRenderData, ProjectionMat, ViewMat);
 
         SDL_GL_SwapWindow(Window);

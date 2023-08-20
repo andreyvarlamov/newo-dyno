@@ -1,5 +1,7 @@
 #include "DynoDraw.h"
 
+#include <cstring>
+
 #include <glad/glad.h>
 
 #include "NewoCommon.h"
@@ -176,6 +178,61 @@ DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color,
 
     RenderData->Primitives.VerticesUsed += VertexIndex;
     RenderData->Primitives.IndicesUsed += IndexIndex;
+}
+
+void
+DD_DrawAABox(dd_render_data *RenderData, vec3 Position, vec3 Extents, vec3 Color)
+{
+    u32 VerticesUsed = RenderData->Primitives.VerticesUsed;
+    u32 IndicesUsed = RenderData->Primitives.IndicesUsed;
+    Assert(VerticesUsed + 8 <= MAX_VERTEX_COUNT);
+    Assert(IndicesUsed + 36 <= MAX_INDEX_COUNT);
+
+    vec3 *Positions = &RenderData->Primitives.Positions[VerticesUsed];
+    vec3 *Normals = &RenderData->Primitives.Normals[VerticesUsed];
+    vec3 *Colors = &RenderData->Primitives.Colors[VerticesUsed];
+
+    Positions[0] = Position + vec3 { -Extents.X,  Extents.Y,  Extents.Z };
+    Positions[1] = Position + vec3 { -Extents.X, -Extents.Y,  Extents.Z };
+    Positions[2] = Position + vec3 {  Extents.X, -Extents.Y,  Extents.Z };
+    Positions[3] = Position + vec3 {  Extents.X,  Extents.Y,  Extents.Z };
+    Positions[4] = Position + vec3 {  Extents.X,  Extents.Y, -Extents.Z };
+    Positions[5] = Position + vec3 {  Extents.X, -Extents.Y, -Extents.Z };
+    Positions[6] = Position + vec3 { -Extents.X, -Extents.Y, -Extents.Z };
+    Positions[7] = Position + vec3 { -Extents.X,  Extents.Y, -Extents.Z };
+
+    Normals[0] = VecNormalize(vec3 { -1.0f,  1.0f,  1.0f });
+    Normals[1] = VecNormalize(vec3 { -1.0f, -1.0f,  1.0f });
+    Normals[2] = VecNormalize(vec3 {  1.0f, -1.0f,  1.0f });
+    Normals[3] = VecNormalize(vec3 {  1.0f,  1.0f,  1.0f });
+    Normals[4] = VecNormalize(vec3 {  1.0f,  1.0f, -1.0f });
+    Normals[5] = VecNormalize(vec3 {  1.0f, -1.0f, -1.0f });
+    Normals[6] = VecNormalize(vec3 { -1.0f, -1.0f, -1.0f });
+    Normals[7] = VecNormalize(vec3 { -1.0f,  1.0f, -1.0f });
+
+    for (i32 I = 0; I < 8; ++I)
+    {
+        Colors[I] = Color;
+    }
+
+    i32 *Indices = &RenderData->Primitives.Indices[IndicesUsed];
+
+    i32 IndicesToCopy[] = {
+        0, 1, 3,  3, 1, 2, // front
+        4, 5, 7,  7, 5, 6, // back
+        7, 0, 4,  4, 0, 3, // top
+        1, 6, 2,  2, 6, 5, // bottom
+        7, 6, 0,  0, 6, 1, // left
+        3, 2, 4,  4, 2, 5  // right
+    };
+
+    for (u32 IndexIndex = 0; IndexIndex < ArrayCount(IndicesToCopy); ++IndexIndex)
+    {
+        Indices[IndexIndex] = IndicesToCopy[IndexIndex] + VerticesUsed;
+    }
+
+    RenderData->Primitives.VerticesUsed += 8;
+    RenderData->Primitives.IndicesUsed += 36;
 }
 
 void

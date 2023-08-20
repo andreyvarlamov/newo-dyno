@@ -54,11 +54,8 @@ struct dd_render_data
     memory_arena *MemoryArena;
 
     dd_primitives_render_data Primitives;
-    
     dd_dots_render_data Dots;
-
     dd_dots_render_data OverlayDots;
-
     dd_vectors_render_data Vectors;
 };
 
@@ -67,6 +64,9 @@ DD_InitializeRenderData(memory_arena *MemoryArena);
 
 void
 DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color, u32 RingCount, u32 SectorCount);
+
+void
+DD_DrawAABox(dd_render_data *RenderData, vec3 Position, vec3 Extents, vec3 Color);
 
 void
 DD_DrawDot(dd_render_data *RenderData, vec3 Position, vec3 Color);
