@@ -7,23 +7,23 @@
 
 struct dyno_camera
 {
-    vec3 Position;
-    f32 Yaw;
-    f32 Pitch;
-    
-    vec3 _Front;
-    vec3 _Right;
-    vec3 _Up;
+    vec3 Target;
+    f32 Radius;
+    f32 Theta;
+    f32 Phi;
 };
 
 dyno_camera
-InitializeCamera(vec3 Position, f32 Yaw, f32 Pitch);
+InitializeCamera(vec3 Target, f32 Radius, f32 Theta, f32 Phi);
 
 void
-UpdateCameraPosition(dyno_camera *Camera, f32 DeltaYaw, f32 DeltaPitch, vec3 LocalDeltaPosition);
+UpdateCameraPosition(dyno_camera *Camera, vec3 DeltaPositionLocal, f32 DeltaRadius, f32 DeltaTheta, f32 DeltaPhi);
 
 mat4
 GetCameraViewMat(dyno_camera *Camera);
+
+mat4
+GetViewMat(vec3 Position, vec3 Front, vec3 Up);
 
 mat4
 GetPerspecitveProjectionMat(f32 FovY_Degrees, f32 AspectRatio, f32 Near, f32 Far);
@@ -31,8 +31,5 @@ GetPerspecitveProjectionMat(f32 FovY_Degrees, f32 AspectRatio, f32 Near, f32 Far
 // TODO: Orthographic projection
 mat4
 GetOrthographicProjectionMat();
-
-mat4
-GetViewMat(vec3 Position, vec3 Front, vec3 Up);
 
 #endif

@@ -59,7 +59,8 @@ main(int Argc, char *Argv[])
     InitializeMemoryArena(&DDArena, DDArenaSize, (u8 *) ApplicationMemory);
     dd_render_data *DDRenderData = DD_InitializeRenderData(&DDArena);
 
-    dyno_camera Camera = InitializeCamera(vec3 { 0.0f, 0.0f, 10.0f }, -90.0f, 0.0f);
+    //dyno_camera Camera = InitializeCameraLookAround(vec3 { 0.0f, 0.0f, 0.660f }, 272.50f, 76.3f);
+    dyno_camera Camera = InitializeCamera(vec3 { 0.0f, 0.0f, 0.0f }, 10.0f, 0.0f, 90.0f);
 
     mat4 ProjectionMat = GetPerspecitveProjectionMat(90.0f, (f32) ScreenWidth / (f32) ScreenHeight, 0.1f, 1000.0f);
 
@@ -101,8 +102,8 @@ main(int Argc, char *Argv[])
         f32 CameraTranslationSensitivity = 0.01f;
 
         vec3 CameraTranslation = {};
-        f32 CameraDeltaYaw = 0.0f;
-        f32 CameraDeltaPitch = 0.0f;
+        f32 CameraDeltaTheta = 0.0f;
+        f32 CameraDeltaPhi = 0.0f;
 
         bool MouseMoved = (MouseDeltaX != 0 || MouseDeltaY != 0);
         bool LeftButtonPressed = (SDL_BUTTON(1) & MouseButtonState);
@@ -122,12 +123,21 @@ main(int Argc, char *Argv[])
             }
             else
             {
-                CameraDeltaYaw = (f32) MouseDeltaX * CameraRotationSensitivity;
-                CameraDeltaPitch = (f32) -MouseDeltaY * CameraRotationSensitivity;
+                CameraDeltaTheta = (f32) -MouseDeltaX * CameraRotationSensitivity;
+                CameraDeltaPhi = (f32) -MouseDeltaY * CameraRotationSensitivity;
             }
         }
+
+#if 0
+        if (CurrentKeyStates[SDL_SCANCODE_RETURN])
+        {
+            printf("Position: {%.03f, %.03f, %.03f}, Yaw: %.03f, Pitch %.03f\n",
+                   Camera._Position.X, Camera._Position.Y, Camera._Position.Z,
+                   Camera.LookAround.Yaw, Camera.LookAround.Pitch);
+        }
+#endif
         
-        UpdateCameraPosition(&Camera, CameraDeltaYaw, CameraDeltaPitch, CameraTranslation);
+        UpdateCameraPosition(&Camera, CameraTranslation, 0.0f, CameraDeltaTheta, CameraDeltaPhi);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

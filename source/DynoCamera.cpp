@@ -6,117 +6,86 @@
 #include "NewoMath.h"
 #include "NewoLinearMath.h"
 
-internal inline mat4
-GetViewMatRaw(vec3 Translation, vec3 Back, vec3 Right, vec3 Up);
-#if 0
-internal inline mat4
-GetViewMatAnchoredRaw(vec3 Translation, vec3 Target, vec3 Right, vec3 Up);
-#endif
-internal inline void
-CalculateCameraInternals(dyno_camera *Camera);
-
 dyno_camera
-InitializeCamera(vec3 Position, f32 Yaw, f32 Pitch)
+InitializeCamera(vec3 Target, f32 Radius, f32 Theta, f32 Phi)
 {
     dyno_camera Result = {};
 
-    Result.Position = Position;
-    Result.Yaw = Yaw;
-    Result.Pitch = Pitch;
-
-    CalculateCameraInternals(&Result);
+    Result.Target = Target;
+    Result.Radius = Radius;
+    Result.Theta = Theta;
+    Result.Phi = Phi;
 
     return Result;
 }
 
 void
-UpdateCameraPosition(dyno_camera *Camera, f32 DeltaYaw, f32 DeltaPitch, vec3 LocalDeltaPosition)
+UpdateCameraPosition(dyno_camera *Camera, vec3 DeltaPositionLocal, f32 DeltaRadius, f32 DeltaTheta, f32 DeltaPhi)
 {
-    Camera->Yaw += DeltaYaw;
-    if (Camera->Yaw < 0.0f)
+    Camera->Theta += DeltaTheta;
+    if (Camera->Theta < 0.0f)
     {
-        Camera->Yaw += 360.0f;
+        Camera->Theta += 360.0f;
     }
-    else if (Camera->Yaw > 360.0f)
+    else if (Camera->Theta > 360.0f)
     {
-        Camera->Yaw -= 360.0f;
-    }
-
-    Camera->Pitch += DeltaPitch;
-    if (Camera->Pitch > 89.0f)
-    {
-        Camera->Pitch = 89.0f;
-    }
-    else if (Camera->Pitch < -89.0f)
-    {
-        Camera->Pitch = -89.0f;
+        Camera->Theta -= 360.0f;
     }
 
-    CalculateCameraInternals(Camera);
+    Camera->Phi += DeltaPhi;
+    if (Camera->Phi > 179.0f)
+    {
+        Camera->Phi = 179.0f;
+    }
+    else if (Camera->Phi < 1.0f)
+    {
+        Camera->Phi = 1.0f;
+    }
 
-    mat3 LocalToWorld = Mat3FromVec3Columns(Camera->_Right, Camera->_Up, Camera->_Front);
-    
-    Camera->Position += LocalToWorld * LocalDeltaPosition;
+    Camera->Radius += DeltaRadius;
+    if (Camera->Radius < 0.0f)
+    {
+        Camera->Radius = 0.0f;
+    }
+
+    if (Camera->Radius > 0.0f)
+    {
+        vec3 Front = -VecSphericalToCartesian(Camera->Theta, Camera->Phi);
+        vec3 Right = VecCrossProduct(Front, vec3 { 0.0f, 1.0f, 0.0f });
+        vec3 Up = VecCrossProduct(Right, Front);
+
+        mat3 LocalToWorld = Mat3FromVec3Columns(Right, Up, Front);
+
+        Camera->Target += LocalToWorld * DeltaPositionLocal;
+    }
+    else
+    {
+        Assert(false);
+    }
 }
 
 mat4
 GetCameraViewMat(dyno_camera *Camera)
 {
-    mat4 Result = GetViewMatRaw(Camera->Position, Camera->_Front, Camera->_Right, Camera->_Up);
-    return Result;
-}
+    vec3 CartesianDirection = VecSphericalToCartesian(Camera->Theta, Camera->Phi);
+    vec3 CameraTranslationFromTarget = Camera->Radius * CartesianDirection;
+    vec3 CameraPosition = Camera->Target + CameraTranslationFromTarget;
 
-mat4
-GetPerspecitveProjectionMat(f32 FovY_Degrees, f32 AspectRatio, f32 Near, f32 Far)
-{
-    // NOTE: http://www.songho.ca/opengl/gl_projectionmatrix.html
-    mat4 Result = Mat4Identity();
-
-    f32 HalfHeight = Near * TanF32(DegreesToRadians(FovY_Degrees) / 2.0f);
-    f32 HalfWidth = HalfHeight * AspectRatio;
-
-#if 0
-    f32 Left = -HalfWidth;
-    f32 Right = HalfWidth;
-    f32 Top = HalfHeight;
-    f32 Bottom = -HalfHeight;
-    Result.D[0][0] = 2.0f * Near / (Right - Left);
-    Result.D[1][1] = 2.0f * Near / (Top - Bottom);
-    Result.D[2][0] = (Right + Left) / (Right - Left);
-    Result.D[2][1] = (Top + Bottom) / (Top - Bottom);
-    Result.D[2][2] = -(Far + Near) / (Far - Near);
-    Result.D[2][3] = -1.0f;
-    Result.D[3][2] = -2.0f * Far * Near / (Far - Near);
-#else
-    // NOTE: This is assuming symmetrical frustum
-    Result.D[0][0] = Near / HalfWidth; // Near / (Near * Tan... * AR)
-    Result.D[1][1] = Near / HalfHeight; // Near / (Near * Tan...)
-    Result.D[2][2] = -(Far + Near) / (Far - Near);
-    Result.D[2][3] = -1.0f;
-    Result.D[3][2] = -2.0f * Far * Near / (Far - Near);
-#endif
-
+    mat4 Result = GetViewMat(CameraPosition, Camera->Target, vec3 { 0.0f, 1.0f, 0.0f });
     return Result;
 }
 
 mat4
 GetViewMat(vec3 EyePosition, vec3 TargetPoint, vec3 WorldUp)
 {
-    vec3 Front = VecNormalize(TargetPoint - EyePosition);
-    vec3 Right = VecNormalize(VecCrossProduct(VecNormalize(WorldUp), Front));
-    vec3 Up = VecCrossProduct(Front, Right);
-
-    mat4 Result = GetViewMatRaw(EyePosition, Front, Right, Up);
-    return Result;
-}
-
-internal inline mat4
-GetViewMatRaw(vec3 Translation, vec3 Front, vec3 Right, vec3 Up)
-{
     // NOTE: General formula: https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml
     // Translation optimization by dot product from GLM
-    mat4 Result = Mat4Identity();
 
+    vec3 Front = VecNormalize(TargetPoint - EyePosition);
+    vec3 Right = VecNormalize(VecCrossProduct(Front, VecNormalize(WorldUp)));
+    vec3 Up = VecCrossProduct(Right, Front);
+
+    mat4 Result = Mat4Identity();
     Result.D[0][0] =  Right.X;
     Result.D[0][1] =  Up.X;
     Result.D[0][2] = -Front.X;
@@ -126,60 +95,27 @@ GetViewMatRaw(vec3 Translation, vec3 Front, vec3 Right, vec3 Up)
     Result.D[2][0] =  Right.Z;
     Result.D[2][1] =  Up.Z;
     Result.D[2][2] = -Front.Z;
-    Result.D[3][0] = -VecDotProduct(Right, Translation);
-    Result.D[3][1] = -VecDotProduct(Up, Translation);
-    Result.D[3][2] =  VecDotProduct(Front, Translation);
+    Result.D[3][0] = -VecDotProduct(Right, EyePosition);
+    Result.D[3][1] = -VecDotProduct(Up, EyePosition);
+    Result.D[3][2] =  VecDotProduct(Front, EyePosition);
 
     return Result;
 }
-#if 0
-internal inline mat4
-GetViewMatAnchoredRaw(vec3 EyePosition, vec3 Target, vec3 Right, vec3 Up)
+
+mat4
+GetPerspecitveProjectionMat(f32 FovY_Degrees, f32 AspectRatio, f32 Near, f32 Far)
 {
-    // NOTE: General formula: https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml
-    // Translation optimization by dot product from GLM
+    // NOTE: http://www.songho.ca/opengl/gl_projectionmatrix.html
+    mat4 Result = {};
 
-    vec3 TranslationToTarget = Target - EyePosition;
-    vec3 Front = VecNormalize(TranslationToTarget);
+    f32 HalfHeight = Near * TanF32(DegreesToRadians(FovY_Degrees) / 2.0f);
+    f32 HalfWidth = HalfHeight * AspectRatio;
 
-    mat4 Rotation = Mat4Identity();
-    Rotation.D[0][0] =  Right.X;
-    Rotation.D[0][1] =  Up.X;
-    Rotation.D[0][2] = -Front.X;
-    Rotation.D[1][0] =  Right.Y;
-    Rotation.D[1][1] =  Up.Y;
-    Rotation.D[1][2] = -Front.Y;
-    Rotation.D[2][0] =  Right.Z;
-    Rotation.D[2][1] =  Up.Z;
-    Rotation.D[2][2] = -Front.Z;
+    Result.D[0][0] = Near / HalfWidth;
+    Result.D[1][1] = Near / HalfHeight;
+    Result.D[2][2] = -(Far + Near) / (Far - Near);
+    Result.D[2][3] = -1.0f;
+    Result.D[3][2] = -2.0f * Far * Near / (Far - Near);
 
-    mat4 TranslationMat = Mat4Identity();
-    TranslationMat.D[3][0] = -EyePosition.X;
-    TranslationMat.D[3][1] = -EyePosition.Y;
-    TranslationMat.D[3][2] = -EyePosition.Z;
-
-    mat4 TranslationToTargetMat = Mat4Identity();
-    TranslationToTargetMat.D[3][0] = -TranslationToTarget.X;
-    TranslationToTargetMat.D[3][1] = -TranslationToTarget.Y;
-    TranslationToTargetMat.D[3][2] = -TranslationToTarget.Z;
-
-    mat4 Result = TranslationToTargetMat * Rotation * TranslationMat;
     return Result;
-}
-#endif
-internal inline void
-CalculateCameraInternals(dyno_camera *Camera)
-{
-    Camera->_Front = vec3 { 0.0f, 0.0f, 0.0f };
-    f32 PitchRad = DegreesToRadians(Camera->Pitch);
-    f32 YawRad = DegreesToRadians(Camera->Yaw);
-    Camera->_Front.X = CosF32(PitchRad) * CosF32(YawRad);
-    Camera->_Front.Y = SinF32(PitchRad);
-    Camera->_Front.Z = CosF32(PitchRad) * SinF32(YawRad);
-    Camera->_Front = VecNormalize(Camera->_Front);
-    // NOTE: For the calculation of the camera position, flip Z-axis and make the coordinate system left-handed
-    // as opposed to right-handed. Because we want the camera to move in the direction of the front vector
-    // when going forward. But in right-handed system, in which the world is, forward, into the screen, is negative Z.
-    Camera->_Right = VecNormalize(VecCrossProduct(Camera->_Front, vec3 { 0.0f, 1.0f, 0.0f }));
-    Camera->_Up = VecCrossProduct(Camera->_Right, Camera->_Front);
 }
