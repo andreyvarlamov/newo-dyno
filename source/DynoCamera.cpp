@@ -55,7 +55,7 @@ UpdateCameraOrientation(dyno_camera *Camera, f32 DeltaRadius, f32 DeltaTheta, f3
     if (!Camera->IsLookAround)
     {
         vec3 TranslationFromOldPositionToTarget = OldRadius * -VecSphericalToCartesian(OldTheta, OldPhi);
-        vec3 TranslationFromTargetToNewPosition = Camera->Radius * VecSphericalToCartesian(Camera->Theta, Camera->Phi);
+        vec3 TranslationFromTargetToNewPosition = OldRadius * VecSphericalToCartesian(Camera->Theta, Camera->Phi);
         Camera->Position += TranslationFromOldPositionToTarget + TranslationFromTargetToNewPosition;
     }
 }
@@ -85,6 +85,20 @@ GetCameraViewMat(dyno_camera *Camera)
     }
 
     mat4 Result = GetViewMat(Camera->Position, CameraTarget, vec3 { 0.0f, 1.0f, 0.0f });
+    return Result;
+}
+
+vec3
+GetCameraTarget(dyno_camera *Camera)
+{
+    vec3 Result = Camera->Position;
+
+    if (!Camera->IsLookAround)
+    {
+        vec3 TranslationToTarget = Camera->Radius * -VecSphericalToCartesian(Camera->Theta, Camera->Phi);
+        Result += TranslationToTarget;
+    }
+
     return Result;
 }
 

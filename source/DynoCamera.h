@@ -26,6 +26,9 @@ UpdateCameraPosition(dyno_camera *Camera, vec3 DeltaPositionLocal);
 mat4
 GetCameraViewMat(dyno_camera *Camera);
 
+vec3
+GetCameraTarget(dyno_camera *Camera);
+
 mat4
 GetViewMat(vec3 Position, vec3 Front, vec3 Up);
 

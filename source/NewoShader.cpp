@@ -28,6 +28,8 @@ BuildShaderProgram(const char *VertexPath, const char *FragmentPath)
     glDeleteShader(VertexShader);
     glDeleteShader(FragmentShader);
 
+    Assert(ShaderProgram != 0);
+
     return ShaderProgram;
 }
 

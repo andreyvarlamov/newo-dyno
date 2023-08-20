@@ -37,8 +37,10 @@
     <ClInclude Include="..\..\source\NewoShader.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\resource\shader\DynoDraw.fs" />
-    <None Include="..\..\resource\shader\DynoDraw.vs" />
+    <None Include="..\..\resource\shader\DynoDraw_Basic.fs" />
+    <None Include="..\..\resource\shader\DynoDraw_Basic.vs" />
+    <None Include="..\..\resource\shader\DynoDraw_Primitives.fs" />
+    <None Include="..\..\resource\shader\DynoDraw_Primitives.vs" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

@@ -49,10 +49,16 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\resource\shader\DynoDraw.vs">
+    <None Include="..\..\resource\shader\DynoDraw_Primitives.vs">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="..\..\resource\shader\DynoDraw.fs">
+    <None Include="..\..\resource\shader\DynoDraw_Primitives.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\resource\shader\DynoDraw_Basic.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\resource\shader\DynoDraw_Basic.vs">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

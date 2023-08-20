@@ -59,8 +59,7 @@ main(int Argc, char *Argv[])
     InitializeMemoryArena(&DDArena, DDArenaSize, (u8 *) ApplicationMemory);
     dd_render_data *DDRenderData = DD_InitializeRenderData(&DDArena);
 
-    //dyno_camera Camera = InitializeCameraLookAround(vec3 { 0.0f, 0.0f, 0.660f }, 272.50f, 76.3f);
-    dyno_camera Camera = InitializeCamera(vec3 { 0.0f, 0.0f, 10.0f }, 1.0f, 0.0f, 90.0f);
+    dyno_camera Camera = InitializeCamera(vec3 { 0.0f, 0.0f, 10.0f }, 10.0f, 0.0f, 90.0f);
 
     mat4 ProjectionMat = GetPerspecitveProjectionMat(90.0f, (f32) ScreenWidth / (f32) ScreenHeight, 0.1f, 1000.0f);
 
@@ -102,6 +101,7 @@ main(int Argc, char *Argv[])
         f32 CameraTranslationSensitivity = 0.01f;
 
         vec3 CameraTranslation = {};
+        f32 CameraDeltaRadius = 0.0f;
         f32 CameraDeltaTheta = 0.0f;
         f32 CameraDeltaPhi = 0.0f;
 
@@ -112,7 +112,11 @@ main(int Argc, char *Argv[])
 
         if (MiddleButtonPressed && MouseMoved)
         {
-            if (CurrentKeyStates[SDL_SCANCODE_LSHIFT])
+            if (CurrentKeyStates[SDL_SCANCODE_LSHIFT] && CurrentKeyStates[SDL_SCANCODE_LALT])
+            {
+                CameraDeltaRadius = (f32) -MouseDeltaY * CameraTranslationSensitivity;
+            }
+            else if (CurrentKeyStates[SDL_SCANCODE_LSHIFT])
             {
                 CameraTranslation.X = (f32) -MouseDeltaX * CameraTranslationSensitivity;
                 CameraTranslation.Y = (f32) MouseDeltaY * CameraTranslationSensitivity;
@@ -128,25 +132,23 @@ main(int Argc, char *Argv[])
             }
         }
 
-#if 0
-        if (CurrentKeyStates[SDL_SCANCODE_RETURN])
-        {
-            printf("Position: {%.03f, %.03f, %.03f}, Yaw: %.03f, Pitch %.03f\n",
-                   Camera._Position.X, Camera._Position.Y, Camera._Position.Z,
-                   Camera.LookAround.Yaw, Camera.LookAround.Pitch);
-        }
-#endif
-        
-        UpdateCameraOrientation(&Camera, 0.0f, CameraDeltaTheta, CameraDeltaPhi);
+        UpdateCameraOrientation(&Camera, CameraDeltaRadius, CameraDeltaTheta, CameraDeltaPhi);
         UpdateCameraPosition(&Camera, CameraTranslation);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        // Coordinate system
+        DD_DrawVector(DDRenderData, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.0f, 0.0f });
+        DD_DrawVector(DDRenderData, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 0.0f, 5.0f, 0.0f }, vec3 { 0.0f, 1.0f, 0.0f });
+        DD_DrawVector(DDRenderData, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 0.0f, 0.0f, 5.0f }, vec3 { 0.0f, 0.0f, 1.0f });
+
         mat4 ViewMat = GetCameraViewMat(&Camera);
 
-        DD_DrawSphere(DDRenderData, 1.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 9, 10);
-        //DD_DrawSphere(DDRenderData, 1.0f, vec3 { 5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.0f, 0.0f }, 9, 10);
+        vec3 CameraTargetPosition = GetCameraTarget(&Camera); // Lol this just puts a dot in the middle of the screen. Nice one!
+        DD_DrawDot(DDRenderData, CameraTargetPosition, vec3 { 1.0f, 0.7f, 0.0f });
+        DD_DrawSphere(DDRenderData, 4.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 9, 10);
+        DD_DrawSphere(DDRenderData, 1.0f, vec3 { 5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.0f, 0.0f }, 9, 10);
 
         DD_Render(DDRenderData, ProjectionMat, ViewMat);
 
