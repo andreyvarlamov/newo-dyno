@@ -16,9 +16,12 @@
 #define SHADERP_PRIMITIVES_FRAG "resource/shader/DynoDraw_Primitives.fs"
 
 internal void
-PrepareGPUBuffers(u32 VertexCount, size_t *AttributeStrides, u32 *AttributeComponentCounts, u32 AttributeCount,
+PrepareGPUBuffers(u32 VertexCount, size_t *AttribStrides, u32 *AttribComponentCounts, u32 AttribCount,
                   u32 IndexCount, size_t IndexSize,
                   u32 *Out_VAO, u32 *Out_VBO, u32 *Out_EBO);
+
+internal dd_prims_render_data *
+GetRenderDataForPrimStyle(dd_render_data *RenderData, prim_style Style);
 
 dd_render_data *
 DD_InitializeRenderData(memory_arena *MemoryArena)
@@ -29,31 +32,26 @@ DD_InitializeRenderData(memory_arena *MemoryArena)
     dd_render_data *RenderData = PushStruct(MemoryArena, dd_render_data);
     RenderData->MemoryArena = MemoryArena;
 
-    size_t AttributeStrides[] = { sizeof(vec3), sizeof(vec3), sizeof(vec3) };
-    u32 AttributeComponentCounts[] = { 3, 3, 3 };
-    PrepareGPUBuffers(MAX_VERTEX_COUNT, AttributeStrides, AttributeComponentCounts, ArrayCount(AttributeStrides),
-                      MAX_INDEX_COUNT, sizeof(i32),
-                      &RenderData->Primitives.VAO, &RenderData->Primitives.VBO, &RenderData->Primitives.EBO);
-    RenderData->Primitives.Shader = BuildShaderProgram(SHADERP_PRIMITIVES_VERT, SHADERP_PRIMITIVES_FRAG);
+    size_t Prim_AttribS[] = { sizeof(vec3), sizeof(vec3), sizeof(vec3) }; u32 Prim_AttribCC[] = { 3, 3, 3 };
+    PrepareGPUBuffers(MAX_VERTEX_COUNT, Prim_AttribS, Prim_AttribCC, ArrayCount(Prim_AttribS), MAX_INDEX_COUNT, sizeof(i32),
+                      &RenderData->Prims.VAO, &RenderData->Prims.VBO, &RenderData->Prims.EBO);
+    RenderData->Prims.Shader = BuildShaderProgram(SHADERP_PRIMITIVES_VERT, SHADERP_PRIMITIVES_FRAG);
 
-    size_t DotAttributeStrides[] = { sizeof(vec3), sizeof(vec3) };
-    u32 DotAttributeComponentCounts[] = { 3, 3 };
-    PrepareGPUBuffers(MAX_DOT_COUNT, DotAttributeStrides, DotAttributeComponentCounts, ArrayCount(DotAttributeStrides),
-                      0, 0,
+    PrepareGPUBuffers(MAX_VERTEX_COUNT, Prim_AttribS, Prim_AttribCC, ArrayCount(Prim_AttribS), MAX_INDEX_COUNT, sizeof(i32),
+                      &RenderData->WirePrims.VAO, &RenderData->WirePrims.VBO, &RenderData->WirePrims.EBO);
+    RenderData->WirePrims.Shader = RenderData->Prims.Shader;
+
+    size_t Dots_AttribS[] = { sizeof(vec3), sizeof(vec3) }; u32 Dots_AttribCC[] = { 3, 3 };
+    PrepareGPUBuffers(MAX_DOT_COUNT, Dots_AttribS, Dots_AttribCC, ArrayCount(Dots_AttribS), 0, 0,
                       &RenderData->Dots.VAO, &RenderData->Dots.VBO, NULL);
     RenderData->Dots.Shader = BuildShaderProgram(SHADERP_BASIC_VERT, SHADERP_BASIC_FRAG);
 
-    size_t ODotAttributeStrides[] = { sizeof(vec3), sizeof(vec3) };
-    u32 ODotAttributeComponentCounts[] = { 3, 3 };
-    PrepareGPUBuffers(MAX_DOT_COUNT, ODotAttributeStrides, ODotAttributeComponentCounts, ArrayCount(ODotAttributeStrides),
-                      0, 0,
+    PrepareGPUBuffers(MAX_DOT_COUNT, Dots_AttribS, Dots_AttribCC, ArrayCount(Dots_AttribS), 0, 0,
                       &RenderData->OverlayDots.VAO, &RenderData->OverlayDots.VBO, NULL);
     RenderData->OverlayDots.Shader = RenderData->Dots.Shader;
 
-    size_t VectorAttributeStrides[] = { sizeof(vec3), sizeof(vec3) };
-    u32 VectorAttributeComponentCounts[] = { 3, 3 };
-    PrepareGPUBuffers(MAX_VECTOR_COUNT, VectorAttributeStrides, VectorAttributeComponentCounts, ArrayCount(VectorAttributeStrides),
-                      0, 0,
+    size_t Vec_AttribS[] = { sizeof(vec3), sizeof(vec3) }; u32 Vec_AttribCC[] = { 3, 3 };
+    PrepareGPUBuffers(MAX_VECTOR_COUNT, Vec_AttribS, Vec_AttribCC, ArrayCount(Vec_AttribS), 0, 0,
                       &RenderData->Vectors.VAO, &RenderData->Vectors.VBO, NULL);
     RenderData->Vectors.Shader = RenderData->Dots.Shader;
 
@@ -61,20 +59,24 @@ DD_InitializeRenderData(memory_arena *MemoryArena)
 }
 
 void
-DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color, u32 RingCount, u32 SectorCount)
+DD_DrawSphere(dd_render_data *RenderData, prim_style Style,
+              f32 Radius, vec3 Position, vec3 Color, u32 RingCount, u32 SectorCount)
 {
     Assert(RingCount > 2);
     Assert(SectorCount > 2);
-    u32 VerticesUsed = RenderData->Primitives.VerticesUsed;
-    u32 IndicesUsed = RenderData->Primitives.IndicesUsed;
+
+    dd_prims_render_data *Prims = GetRenderDataForPrimStyle(RenderData, Style);
+
+    u32 VerticesUsed = Prims->VerticesUsed;
+    u32 IndicesUsed = Prims->IndicesUsed;
     u32 ExpectedVertexCount = 2 + (RingCount - 2) * SectorCount;
     u32 ExpectedIndexCount = (RingCount - 2) * SectorCount * 6;
     Assert(VerticesUsed + ExpectedVertexCount <= MAX_VERTEX_COUNT);
     Assert(IndicesUsed + ExpectedIndexCount <= MAX_INDEX_COUNT);
 
-    vec3 *Positions = &RenderData->Primitives.Positions[VerticesUsed];
-    vec3 *Normals = &RenderData->Primitives.Normals[VerticesUsed];
-    vec3 *Colors = &RenderData->Primitives.Colors[VerticesUsed];
+    vec3 *Positions = &Prims->Positions[VerticesUsed];
+    vec3 *Normals = &Prims->Normals[VerticesUsed];
+    vec3 *Colors = &Prims->Colors[VerticesUsed];
 
     u32 VertexIndex = 0;
 
@@ -123,7 +125,7 @@ DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color,
     }
     Assert(VertexIndex == ExpectedVertexCount);
 
-    i32 *Indices = &RenderData->Primitives.Indices[IndicesUsed];
+    i32 *Indices = &Prims->Indices[IndicesUsed];
 
     u32 IndexIndex = 0;
 
@@ -176,21 +178,23 @@ DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color,
     }
     Assert(IndexIndex == ExpectedIndexCount);
 
-    RenderData->Primitives.VerticesUsed += VertexIndex;
-    RenderData->Primitives.IndicesUsed += IndexIndex;
+    Prims->VerticesUsed += VertexIndex;
+    Prims->IndicesUsed += IndexIndex;
 }
 
 void
-DD_DrawAABox(dd_render_data *RenderData, vec3 Position, vec3 Extents, vec3 Color)
+DD_DrawAABox(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 Extents, vec3 Color)
 {
-    u32 VerticesUsed = RenderData->Primitives.VerticesUsed;
-    u32 IndicesUsed = RenderData->Primitives.IndicesUsed;
+    dd_prims_render_data *Prims = GetRenderDataForPrimStyle(RenderData, Style);
+
+    u32 VerticesUsed = Prims->VerticesUsed;
+    u32 IndicesUsed = Prims->IndicesUsed;
     Assert(VerticesUsed + 8 <= MAX_VERTEX_COUNT);
     Assert(IndicesUsed + 36 <= MAX_INDEX_COUNT);
 
-    vec3 *Positions = &RenderData->Primitives.Positions[VerticesUsed];
-    vec3 *Normals = &RenderData->Primitives.Normals[VerticesUsed];
-    vec3 *Colors = &RenderData->Primitives.Colors[VerticesUsed];
+    vec3 *Positions = &Prims->Positions[VerticesUsed];
+    vec3 *Normals = &Prims->Normals[VerticesUsed];
+    vec3 *Colors = &Prims->Colors[VerticesUsed];
 
     Positions[0] = Position + vec3 { -Extents.X,  Extents.Y,  Extents.Z };
     Positions[1] = Position + vec3 { -Extents.X, -Extents.Y,  Extents.Z };
@@ -215,7 +219,7 @@ DD_DrawAABox(dd_render_data *RenderData, vec3 Position, vec3 Extents, vec3 Color
         Colors[I] = Color;
     }
 
-    i32 *Indices = &RenderData->Primitives.Indices[IndicesUsed];
+    i32 *Indices = &Prims->Indices[IndicesUsed];
 
     i32 IndicesToCopy[] = {
         0, 1, 3,  3, 1, 2, // front
@@ -231,8 +235,8 @@ DD_DrawAABox(dd_render_data *RenderData, vec3 Position, vec3 Extents, vec3 Color
         Indices[IndexIndex] = IndicesToCopy[IndexIndex] + VerticesUsed;
     }
 
-    RenderData->Primitives.VerticesUsed += 8;
-    RenderData->Primitives.IndicesUsed += 36;
+    Prims->VerticesUsed += 8;
+    Prims->IndicesUsed += 36;
 }
 
 void
@@ -266,30 +270,49 @@ void
 DD_Render(dd_render_data *RenderData, mat4 Projection, mat4 View)
 {
     // Primitives
-    dd_primitives_render_data *Primitives = &RenderData->Primitives;
-    glBindBuffer(GL_ARRAY_BUFFER, Primitives->VBO);
-    size_t AttribUsedBytes = sizeof(vec3) * Primitives->VerticesUsed;
+    dd_prims_render_data *Prims = &RenderData->Prims;
+    glBindVertexArray(Prims->VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, Prims->VBO);
+    size_t AttribUsedBytes = sizeof(vec3) * Prims->VerticesUsed;
     size_t AttribMaxBytes = sizeof(vec3) * MAX_VERTEX_COUNT;
-    glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &Primitives->Positions);
-    glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &Primitives->Colors);
-    glBufferSubData(GL_ARRAY_BUFFER, 2 * AttribMaxBytes, AttribUsedBytes, &Primitives->Normals);
-    size_t IndicesUsedBytes = sizeof(i32) * Primitives->IndicesUsed;
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Primitives->EBO);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, IndicesUsedBytes, &Primitives->Indices);
+    glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &Prims->Positions);
+    glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &Prims->Colors);
+    glBufferSubData(GL_ARRAY_BUFFER, 2 * AttribMaxBytes, AttribUsedBytes, &Prims->Normals);
+    size_t IndicesUsedBytes = sizeof(i32) * Prims->IndicesUsed;
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Prims->EBO);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, IndicesUsedBytes, &Prims->Indices);
 
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    UseShader(Prims->Shader);
+    SetUniformMat4F(Prims->Shader, "Projection", (f32 *) &Projection, false);
+    SetUniformMat4F(Prims->Shader, "View", (f32 *) &View, false);
+    glDrawElements(GL_TRIANGLES, Prims->IndicesUsed, GL_UNSIGNED_INT, 0);
 
-    UseShader(Primitives->Shader);
-    SetUniformMat4F(Primitives->Shader, "Projection", (f32 *) &Projection, false);
-    SetUniformMat4F(Primitives->Shader, "View", (f32 *) &View, false);
-    glBindVertexArray(Primitives->VAO);
-    glDrawElements(GL_TRIANGLES, Primitives->IndicesUsed, GL_UNSIGNED_INT, 0);
+    Prims->VerticesUsed = 0;
+    Prims->IndicesUsed = 0;
 
-    Primitives->VerticesUsed = 0;
-    Primitives->IndicesUsed = 0;
+    // Wireframe primitives
+    dd_prims_render_data *WirePrims = &RenderData->WirePrims;
+    glBindVertexArray(WirePrims->VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, WirePrims->VBO);
+    AttribUsedBytes = sizeof(vec3) * WirePrims->VerticesUsed;
+    AttribMaxBytes = sizeof(vec3) * MAX_VERTEX_COUNT;
+    glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &WirePrims->Positions);
+    glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &WirePrims->Colors);
+    glBufferSubData(GL_ARRAY_BUFFER, 2 * AttribMaxBytes, AttribUsedBytes, &WirePrims->Normals);
+    IndicesUsedBytes = sizeof(i32) * WirePrims->IndicesUsed;
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, WirePrims->EBO);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, IndicesUsedBytes, &WirePrims->Indices);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glDrawElements(GL_TRIANGLES, WirePrims->IndicesUsed, GL_UNSIGNED_INT, 0);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    WirePrims->VerticesUsed = 0;
+    WirePrims->IndicesUsed = 0;
 
     // Dots
     dd_dots_render_data *Dots = &RenderData->Dots;
+    glBindVertexArray(Dots->VAO);
     glBindBuffer(GL_ARRAY_BUFFER, Dots->VBO);
     AttribUsedBytes = sizeof(vec3) * Dots->Used;
     AttribMaxBytes = sizeof(vec3) * MAX_DOT_COUNT;
@@ -299,20 +322,19 @@ DD_Render(dd_render_data *RenderData, mat4 Projection, mat4 View)
     UseShader(Dots->Shader);
     SetUniformMat4F(Dots->Shader, "Projection", (f32 *) &Projection, false);
     SetUniformMat4F(Dots->Shader, "View", (f32 *) &View, false);
-    glBindVertexArray(Dots->VAO);
     glPointSize(6);
     glDrawArrays(GL_POINTS, 0, Dots->Used);
     Dots->Used = 0;
 
     // Overlay dots
     dd_dots_render_data *OverlayDots = &RenderData->OverlayDots;
+    glBindVertexArray(OverlayDots->VAO);
     glBindBuffer(GL_ARRAY_BUFFER, OverlayDots->VBO);
     AttribUsedBytes = sizeof(vec3) * OverlayDots->Used;
     AttribMaxBytes = sizeof(vec3) * MAX_DOT_COUNT;
     glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &OverlayDots->Positions);
     glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &OverlayDots->Colors);
 
-    glBindVertexArray(OverlayDots->VAO);
     glDisable(GL_DEPTH_TEST);
     glDrawArrays(GL_POINTS, 0, OverlayDots->Used);
     glEnable(GL_DEPTH_TEST);
@@ -320,13 +342,13 @@ DD_Render(dd_render_data *RenderData, mat4 Projection, mat4 View)
 
     // Vectors
     dd_vectors_render_data *Vectors = &RenderData->Vectors;
+    glBindVertexArray(Vectors->VAO);
     glBindBuffer(GL_ARRAY_BUFFER, Vectors->VBO);
     AttribUsedBytes = sizeof(vec3) * Vectors->Used;
     AttribMaxBytes = sizeof(vec3) * MAX_VECTOR_COUNT;
     glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &Vectors->Positions);
     glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &Vectors->Colors);
 
-    glBindVertexArray(Vectors->VAO);
     glDisable(GL_DEPTH_TEST);
     glLineWidth(2);
     glDrawArrays(GL_LINES, 0, Vectors->Used);
@@ -335,14 +357,14 @@ DD_Render(dd_render_data *RenderData, mat4 Projection, mat4 View)
 }
 
 internal void
-PrepareGPUBuffers(u32 VertexCount, size_t *AttributeStrides, u32 *AttributeComponentCounts, u32 AttributeCount,
+PrepareGPUBuffers(u32 VertexCount, size_t *AttribStrides, u32 *AttribComponentCounts, u32 AttribCount,
                   u32 IndexCount, size_t IndexSize,
                   u32 *Out_VAO, u32 *Out_VBO, u32 *Out_EBO)
 {
     Assert(Out_VAO);
-    Assert(AttributeStrides);
-    Assert(AttributeComponentCounts);
-    Assert(AttributeCount > 0);
+    Assert(AttribStrides);
+    Assert(AttribComponentCounts);
+    Assert(AttribCount > 0);
 
     glGenVertexArrays(1, Out_VAO);
     glBindVertexArray(*Out_VAO);
@@ -352,22 +374,22 @@ PrepareGPUBuffers(u32 VertexCount, size_t *AttributeStrides, u32 *AttributeCompo
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     size_t TotalVertexSize = 0;
-    for (u32 AttributeIndex = 0; AttributeIndex < AttributeCount; ++AttributeIndex)
+    for (u32 AttribIndex = 0; AttribIndex < AttribCount; ++AttribIndex)
     {
-        TotalVertexSize += AttributeStrides[AttributeIndex];
+        TotalVertexSize += AttribStrides[AttribIndex];
     }
     glBufferData(GL_ARRAY_BUFFER, TotalVertexSize * VertexCount, 0, GL_DYNAMIC_DRAW);
-    for (u32 AttributeIndex = 0; AttributeIndex < AttributeCount; ++AttributeIndex)
+    for (u32 AttribIndex = 0; AttribIndex < AttribCount; ++AttribIndex)
     {
-        size_t StrideSize = AttributeStrides[AttributeIndex];
+        size_t StrideSize = AttribStrides[AttribIndex];
         size_t OffsetSize = 0;
-        for (u32 Index = 0; Index < AttributeIndex; ++Index)
+        for (u32 Index = 0; Index < AttribIndex; ++Index)
         {
-            OffsetSize += AttributeStrides[Index] * VertexCount;
+            OffsetSize += AttribStrides[Index] * VertexCount;
         }
-        glVertexAttribPointer(AttributeIndex, AttributeComponentCounts[AttributeIndex], GL_FLOAT, GL_FALSE,
+        glVertexAttribPointer(AttribIndex, AttribComponentCounts[AttribIndex], GL_FLOAT, GL_FALSE,
                               (GLsizei) StrideSize, (void *) OffsetSize);
-        glEnableVertexAttribArray(AttributeIndex);
+        glEnableVertexAttribArray(AttribIndex);
     }
     Assert(VBO);
     if (Out_VBO) *Out_VBO = VBO;
@@ -381,4 +403,28 @@ PrepareGPUBuffers(u32 VertexCount, size_t *AttributeStrides, u32 *AttributeCompo
         Assert(EBO);
         if (Out_EBO) *Out_EBO = EBO;
     }
+}
+
+internal dd_prims_render_data *
+GetRenderDataForPrimStyle(dd_render_data *RenderData, prim_style Style)
+{
+    dd_prims_render_data *Result;
+
+    switch (Style)
+    {
+        case PRIM_STYLE_WIREFRAME:
+        {
+            Result = &RenderData->WirePrims;
+        } break;
+        case PRIM_STYLE_TRANSPARENT:
+        {
+            Result = &RenderData->TranspPrims;
+        } break;
+        default:
+        {
+            Result = &RenderData->Prims;
+        } break;
+    }
+
+    return Result;
 }

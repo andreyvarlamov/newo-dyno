@@ -12,7 +12,7 @@
 #define MAX_DOT_COUNT 128
 #define MAX_VECTOR_COUNT 128
 
-struct dd_primitives_render_data
+struct dd_prims_render_data
 {
     vec3 Positions[MAX_VERTEX_COUNT];
     vec3 Normals[MAX_VERTEX_COUNT];
@@ -53,20 +53,31 @@ struct dd_render_data
 {
     memory_arena *MemoryArena;
 
-    dd_primitives_render_data Primitives;
+    dd_prims_render_data Prims;
+    dd_prims_render_data WirePrims;
+    dd_prims_render_data TranspPrims;
     dd_dots_render_data Dots;
     dd_dots_render_data OverlayDots;
     dd_vectors_render_data Vectors;
+    dd_vectors_render_data OverlayVectors;
+};
+
+enum prim_style
+{
+    PRIM_STYLE_FILLED,
+    PRIM_STYLE_WIREFRAME,
+    PRIM_STYLE_TRANSPARENT
 };
 
 dd_render_data *
 DD_InitializeRenderData(memory_arena *MemoryArena);
 
 void
-DD_DrawSphere(dd_render_data *RenderData, f32 Radius, vec3 Position, vec3 Color, u32 RingCount, u32 SectorCount);
+DD_DrawSphere(dd_render_data *RenderData, prim_style Style,
+              f32 Radius, vec3 Position, vec3 Color, u32 RingCount, u32 SectorCount);
 
 void
-DD_DrawAABox(dd_render_data *RenderData, vec3 Position, vec3 Extents, vec3 Color);
+DD_DrawAABox(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 Extents, vec3 Color);
 
 void
 DD_DrawDot(dd_render_data *RenderData, vec3 Position, vec3 Color);
