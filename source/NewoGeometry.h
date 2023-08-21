@@ -17,6 +17,12 @@ struct aabb
     vec3 Extents;
 };
 
+struct sphere
+{
+    vec3 Center;
+    f32 Radius;
+};
+
 f32
 TriDoubleSignedArea(vec3 A, vec3 B, vec3 C);
 
@@ -75,5 +81,8 @@ GetAABBForPointSet(vec3 *Points, u32 PointCount);
 // extents and store in B
 void
 UpdateAABB(aabb A, mat3 Transform, vec3 Translation, aabb *Out_B);
+
+bool
+TestSphereSphere(sphere A, sphere B);
 
 #endif

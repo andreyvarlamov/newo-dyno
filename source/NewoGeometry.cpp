@@ -252,3 +252,13 @@ UpdateAABB(aabb A, mat3 Transform, vec3 Translation, aabb *Out_B)
         }
     }
 }
+
+bool
+TestSphereSphere(sphere A, sphere B)
+{
+    vec3 D = A.Center - B.Center;
+    f32 DistanceSq = VecLengthSq(D);
+    f32 RadiusSum = A.Radius + B.Radius;
+
+    return DistanceSq <= RadiusSum * RadiusSum;
+}

@@ -19,10 +19,11 @@ enum test_case
     TEST_CASE_AABBS_INTERSECTION,
     TEST_CASE_POINT_SET_BOUNDS,
     TEST_CASE_OBB_BOUNDS,
+    TEST_CASE_SPHERES_INTERSECTION,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_OBB_BOUNDS;
+global_variable test_case CurrentTestCase = TEST_CASE_SPHERES_INTERSECTION;
 
 int
 main(int Argc, char *Argv[])
@@ -284,11 +285,11 @@ main(int Argc, char *Argv[])
 
                 bool AreIntersecting = TestAABBAABB(A, B);
 
-                vec3 Color = vec3 { 0.0f, 1.0f, 0.0f };
+                vec3 Color = vec3 { 1.0f, 1.0f, 1.0f };
 
                 if (AreIntersecting)
                 {
-                    Color = vec3 { 1.0f, 1.0f, 1.0f };
+                    Color = vec3 { 0.0f, 1.0f, 0.0f };
                 }
                 DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, A.Center, A.Extents, Color);
                 DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, B.Center, B.Extents, Color);
@@ -327,9 +328,9 @@ main(int Argc, char *Argv[])
                                 PointSet[PointsUsed].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
                             }
                             PointsUsed++;
-                            KeyWasDown[SDL_SCANCODE_SPACE] = true;
                         }
                     }
+                    KeyWasDown[SDL_SCANCODE_SPACE] = true;
                 }
                 else if (!CurrentKeyStates[SDL_SCANCODE_SPACE])
                 {
@@ -365,6 +366,33 @@ main(int Argc, char *Argv[])
                 DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_TRANSPARENT, ControlledPosition, OrientedBox.Extents, BoxOrientation, vec3 { 1.0f, 0.0f, 0.0f });
                 DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, OrientedBoxBounds.Center, OrientedBoxBounds.Extents, vec3 { 1.0f, 1.0f, 0.0f });
 
+            } break;
+            case TEST_CASE_SPHERES_INTERSECTION:
+            {
+                //
+                // NOTE: Test intersection of 2 spheres
+                //
+                glDisable(GL_CULL_FACE);
+
+                sphere A = {};
+                A.Center = ControlledPosition;
+                A.Radius = 1.0f;
+
+                sphere B = {};
+                B.Center = { 4.0f, 0.0f, 0.0f };
+                B.Radius = 2.0f;
+
+                bool AreIntersecting = TestSphereSphere(A, B);
+
+                vec3 Color = vec3 { 1.0f, 1.0f, 1.0f };
+
+                if (AreIntersecting)
+                {
+                    Color = vec3 { 0.0f, 1.0f, 0.0f };
+                }
+
+                DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, A.Radius, A.Center, Color, 29, 30);
+                DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, B.Radius, B.Center, Color, 29, 30);
             } break;
             default:
             {
