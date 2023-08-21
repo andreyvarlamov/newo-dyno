@@ -41,6 +41,10 @@ DD_InitializeRenderData(memory_arena *MemoryArena)
                       &RenderData->WirePrims.VAO, &RenderData->WirePrims.VBO, &RenderData->WirePrims.EBO);
     RenderData->WirePrims.Shader = RenderData->Prims.Shader;
 
+    PrepareGPUBuffers(MAX_VERTEX_COUNT, Prim_AttribS, Prim_AttribCC, ArrayCount(Prim_AttribS), MAX_INDEX_COUNT, sizeof(i32),
+                      &RenderData->TranspPrims.VAO, &RenderData->TranspPrims.VBO, &RenderData->TranspPrims.EBO);
+    RenderData->TranspPrims.Shader = RenderData->Prims.Shader;
+
     size_t Dots_AttribS[] = { sizeof(vec3), sizeof(vec3) }; u32 Dots_AttribCC[] = { 3, 3 };
     PrepareGPUBuffers(MAX_DOT_COUNT, Dots_AttribS, Dots_AttribCC, ArrayCount(Dots_AttribS), 0, 0,
                       &RenderData->Dots.VAO, &RenderData->Dots.VBO, NULL);
@@ -416,6 +420,34 @@ DD_Render(dd_render_data *RenderData, mat4 Projection, mat4 View)
 
         OverlayVectors->Used = 0;
     }
+
+    // Transparent primitives
+    dd_prims_render_data *TranspPrims = &RenderData->TranspPrims;
+    UseShader(TranspPrims->Shader);
+    SetUniformMat4F(TranspPrims->Shader, "Projection", (f32 *) &Projection, false);
+    SetUniformMat4F(TranspPrims->Shader, "View", (f32 *) &View, false);
+    if (TranspPrims->IndicesUsed > 0)
+    {
+        glBindVertexArray(TranspPrims->VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, TranspPrims->VBO);
+        size_t AttribUsedBytes = sizeof(vec3) * TranspPrims->VerticesUsed;
+        size_t AttribMaxBytes = sizeof(vec3) * MAX_VERTEX_COUNT;
+        glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &TranspPrims->Positions);
+        glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &TranspPrims->Colors);
+        glBufferSubData(GL_ARRAY_BUFFER, 2 * AttribMaxBytes, AttribUsedBytes, &TranspPrims->Normals);
+        size_t IndicesUsedBytes = sizeof(i32) * TranspPrims->IndicesUsed;
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, TranspPrims->EBO);
+        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, IndicesUsedBytes, &TranspPrims->Indices);
+
+        SetUniformInt(TranspPrims->Shader, "IsTransparent", 1, false);
+        glDrawElements(GL_TRIANGLES, TranspPrims->IndicesUsed, GL_UNSIGNED_INT, 0);
+        SetUniformInt(TranspPrims->Shader, "IsTransparent", 0, false);
+
+        TranspPrims->VerticesUsed = 0;
+        TranspPrims->IndicesUsed = 0;
+    }
+
+
 }
 
 internal void

@@ -116,6 +116,25 @@ LoadFileText(const char *Path)
 }
 
 bool
+SetUniformInt(u32 ShaderID, const char *UniformName, i32 Value, bool UseProgram)
+{
+    if (UseProgram)
+    {
+        glUseProgram(ShaderID);
+    }
+
+    i32 UniformLocation = glGetUniformLocation(ShaderID, UniformName);
+
+    if (UniformLocation == -1)
+    {
+        return false;
+    }
+
+    glUniform1i(UniformLocation, Value);
+    return true;
+}
+
+bool
 SetUniformMat4F(u32 ShaderID, const char *UniformName, f32 *Value, bool UseProgram)
 {
     if (UseProgram)

@@ -34,7 +34,9 @@ main(int Argc, char *Argv[])
     printf("Version: %s\n", glGetString(GL_VERSION));
 
     glEnable(GL_DEPTH_TEST);
-    //glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  
 
     //if (SDL_SetRelativeMouseMode(SDL_TRUE) != 0)
     //{
@@ -181,13 +183,11 @@ main(int Argc, char *Argv[])
         DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, vec3 { 10.0f, 0.0f, 0.0f }, vec3 { 0.0f, 0.7f, 0.0f });
 
         // Primitives
-        DD_DrawSphere(DDRenderData, PRIM_STYLE_FILLED, 4.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 29, 30);
-        DD_DrawSphere(DDRenderData, PRIM_STYLE_FILLED, 1.0f, vec3 { 5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.0f, 0.0f }, 9, 10);
-        DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, 1.0f, vec3 { 0.0f, 0.0f, 4.0f }, vec3 { 0.0f, 1.0f, 0.0f }, 9, 10);
-        DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, 1.0f, vec3 { 6.0f, 0.0f, 0.0f }, vec3 { 0.0f, 1.0f, 0.0f }, 9, 10);
-        DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, 1.0f, vec3 { 0.0f, 0.0f,-4.0f }, vec3 { 0.0f, 1.0f, 0.0f }, 9, 10);
-        DD_DrawAABox(DDRenderData, PRIM_STYLE_FILLED, vec3 { -5.0f, 0.0f, 0.0f }, vec3 { 0.5f, 0.5f, 0.5f }, vec3 { 0.0f, 0.0f, 1.0f });
-        DD_DrawAABox(DDRenderData, PRIM_STYLE_FILLED, vec3 { -7.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.5f, 0.5f }, vec3 { 1.0f, 0.0f, 1.0f });
+        DD_DrawSphere(DDRenderData, PRIM_STYLE_FILLED, 2.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 29, 30);
+        DD_DrawAABox(DDRenderData, PRIM_STYLE_TRANSPARENT, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 2.0f, 2.0f, 2.0f }, vec3 { 0.0f, 1.0f, 0.0f });
+        DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, 1.0f, vec3 { 3.0f, 0.0f, 0.0f }, vec3 { 0.0f, 1.0f, 0.0f }, 9, 10);
+        DD_DrawAABox(DDRenderData, PRIM_STYLE_FILLED, vec3 { -5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.5f, 0.5f }, vec3 { 1.0f, 1.0f, 0.0f });
+        DD_DrawSphere(DDRenderData, PRIM_STYLE_TRANSPARENT, VecLength(vec3 { 1.0f, 0.5f, 0.5f }), vec3 { -5.0f, 0.0f, 0.0f }, vec3 { 0.0f, 0.0f, 1.0f }, 9, 10);
         
         mat4 ProjectionMat = GetPerspecitveProjectionMat(70.0f, (f32) ScreenWidth / (f32) ScreenHeight, 0.1f, 1000.0f);
         mat4 ViewMat = GetCameraViewMat(&Camera);
