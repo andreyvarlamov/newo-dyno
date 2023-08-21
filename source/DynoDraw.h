@@ -69,6 +69,12 @@ enum prim_style
     PRIM_STYLE_TRANSPARENT
 };
 
+enum vector_style
+{
+    VECTOR_STYLE_DEPTHTEST,
+    VECTOR_STYLE_OVERLAY
+};
+
 dd_render_data *
 DD_InitializeRenderData(memory_arena *MemoryArena);
 
@@ -80,13 +86,10 @@ void
 DD_DrawAABox(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 Extents, vec3 Color);
 
 void
-DD_DrawDot(dd_render_data *RenderData, vec3 Position, vec3 Color);
+DD_DrawDot(dd_render_data *RenderData, vector_style Style, vec3 Position, vec3 Color);
 
 void
-DD_DrawOverlayDot(dd_render_data *RenderData, vec3 Position, vec3 Color);
-
-void
-DD_DrawVector(dd_render_data *RenderData, vec3 Start, vec3 End, vec3 EndColor);
+DD_DrawVector(dd_render_data *RenderData, vector_style Style, vec3 Start, vec3 End, vec3 EndColor);
 
 void
 DD_Render(dd_render_data *RenderData, mat4 Projection, mat4 View);

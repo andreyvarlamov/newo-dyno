@@ -55,6 +55,12 @@ DD_InitializeRenderData(memory_arena *MemoryArena)
                       &RenderData->Vectors.VAO, &RenderData->Vectors.VBO, NULL);
     RenderData->Vectors.Shader = RenderData->Dots.Shader;
 
+    size_t OVec_AttribS[] = { sizeof(vec3), sizeof(vec3) }; u32 OVec_AttribCC[] = { 3, 3 };
+    PrepareGPUBuffers(MAX_VECTOR_COUNT, OVec_AttribS, OVec_AttribCC, ArrayCount(OVec_AttribS), 0, 0,
+                      &RenderData->OverlayVectors.VAO, &RenderData->OverlayVectors.VBO, NULL);
+    RenderData->OverlayVectors.Shader = RenderData->Dots.Shader;
+
+
     return RenderData;
 }
 
@@ -240,30 +246,48 @@ DD_DrawAABox(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 E
 }
 
 void
-DD_DrawDot(dd_render_data *RenderData, vec3 Position, vec3 Color)
+DD_DrawDot(dd_render_data *RenderData, vector_style Style, vec3 Position, vec3 Color)
 {
-    RenderData->Dots.Positions[RenderData->Dots.Used] = Position;
-    RenderData->Dots.Colors[RenderData->Dots.Used] = Color;
-    RenderData->Dots.Used++;
+    dd_dots_render_data *Dots;
+    switch (Style)
+    {
+        case VECTOR_STYLE_OVERLAY:
+        {
+            Dots = &RenderData->OverlayDots;
+        } break;
+        default:
+        {
+            Dots = &RenderData->Dots;
+        } break;
+    }
+
+    Dots->Positions[Dots->Used] = Position;
+    Dots->Colors[Dots->Used] = Color;
+    Dots->Used++;
 }
 
 void
-DD_DrawOverlayDot(dd_render_data *RenderData, vec3 Position, vec3 Color)
+DD_DrawVector(dd_render_data *RenderData, vector_style Style, vec3 Start, vec3 End, vec3 EndColor)
 {
-    RenderData->OverlayDots.Positions[RenderData->OverlayDots.Used] = Position;
-    RenderData->OverlayDots.Colors[RenderData->OverlayDots.Used] = Color;
-    RenderData->OverlayDots.Used++;
-}
+    dd_vectors_render_data *Vectors;
+    switch (Style)
+    {
+        case VECTOR_STYLE_OVERLAY:
+        {
+            Vectors = &RenderData->OverlayVectors;
+        } break;
+        default:
+        {
+            Vectors = &RenderData->Vectors;
+        } break;
+    }
 
-void
-DD_DrawVector(dd_render_data *RenderData, vec3 Start, vec3 End, vec3 EndColor)
-{
-    RenderData->Vectors.Positions[RenderData->Vectors.Used] = Start;
-    RenderData->Vectors.Colors[RenderData->Vectors.Used] = vec3 { 0.7f, 0.7f, 0.7f };
-    RenderData->Vectors.Used++;
-    RenderData->Vectors.Positions[RenderData->Vectors.Used] = End;
-    RenderData->Vectors.Colors[RenderData->Vectors.Used] = EndColor;
-    RenderData->Vectors.Used++;
+    Vectors->Positions[Vectors->Used] = Start;
+    Vectors->Colors[Vectors->Used] = vec3 { 0.7f, 0.7f, 0.7f };
+    Vectors->Used++;
+    Vectors->Positions[Vectors->Used] = End;
+    Vectors->Colors[Vectors->Used] = EndColor;
+    Vectors->Used++;
 }
 
 void
@@ -271,89 +295,127 @@ DD_Render(dd_render_data *RenderData, mat4 Projection, mat4 View)
 {
     // Primitives
     dd_prims_render_data *Prims = &RenderData->Prims;
-    glBindVertexArray(Prims->VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, Prims->VBO);
-    size_t AttribUsedBytes = sizeof(vec3) * Prims->VerticesUsed;
-    size_t AttribMaxBytes = sizeof(vec3) * MAX_VERTEX_COUNT;
-    glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &Prims->Positions);
-    glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &Prims->Colors);
-    glBufferSubData(GL_ARRAY_BUFFER, 2 * AttribMaxBytes, AttribUsedBytes, &Prims->Normals);
-    size_t IndicesUsedBytes = sizeof(i32) * Prims->IndicesUsed;
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Prims->EBO);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, IndicesUsedBytes, &Prims->Indices);
-
     UseShader(Prims->Shader);
     SetUniformMat4F(Prims->Shader, "Projection", (f32 *) &Projection, false);
     SetUniformMat4F(Prims->Shader, "View", (f32 *) &View, false);
-    glDrawElements(GL_TRIANGLES, Prims->IndicesUsed, GL_UNSIGNED_INT, 0);
+    if (Prims->IndicesUsed > 0)
+    {
+        glBindVertexArray(Prims->VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, Prims->VBO);
+        size_t AttribUsedBytes = sizeof(vec3) * Prims->VerticesUsed;
+        size_t AttribMaxBytes = sizeof(vec3) * MAX_VERTEX_COUNT;
+        glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &Prims->Positions);
+        glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &Prims->Colors);
+        glBufferSubData(GL_ARRAY_BUFFER, 2 * AttribMaxBytes, AttribUsedBytes, &Prims->Normals);
+        size_t IndicesUsedBytes = sizeof(i32) * Prims->IndicesUsed;
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Prims->EBO);
+        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, IndicesUsedBytes, &Prims->Indices);
 
-    Prims->VerticesUsed = 0;
-    Prims->IndicesUsed = 0;
+        glDrawElements(GL_TRIANGLES, Prims->IndicesUsed, GL_UNSIGNED_INT, 0);
+
+        Prims->VerticesUsed = 0;
+        Prims->IndicesUsed = 0;
+    }
 
     // Wireframe primitives
     dd_prims_render_data *WirePrims = &RenderData->WirePrims;
-    glBindVertexArray(WirePrims->VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, WirePrims->VBO);
-    AttribUsedBytes = sizeof(vec3) * WirePrims->VerticesUsed;
-    AttribMaxBytes = sizeof(vec3) * MAX_VERTEX_COUNT;
-    glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &WirePrims->Positions);
-    glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &WirePrims->Colors);
-    glBufferSubData(GL_ARRAY_BUFFER, 2 * AttribMaxBytes, AttribUsedBytes, &WirePrims->Normals);
-    IndicesUsedBytes = sizeof(i32) * WirePrims->IndicesUsed;
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, WirePrims->EBO);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, IndicesUsedBytes, &WirePrims->Indices);
+    if (WirePrims->IndicesUsed > 0)
+    {
+        glBindVertexArray(WirePrims->VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, WirePrims->VBO);
+        size_t AttribUsedBytes = sizeof(vec3) * WirePrims->VerticesUsed;
+        size_t AttribMaxBytes = sizeof(vec3) * MAX_VERTEX_COUNT;
+        glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &WirePrims->Positions);
+        glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &WirePrims->Colors);
+        glBufferSubData(GL_ARRAY_BUFFER, 2 * AttribMaxBytes, AttribUsedBytes, &WirePrims->Normals);
+        size_t IndicesUsedBytes = sizeof(i32) * WirePrims->IndicesUsed;
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, WirePrims->EBO);
+        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, IndicesUsedBytes, &WirePrims->Indices);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glDrawElements(GL_TRIANGLES, WirePrims->IndicesUsed, GL_UNSIGNED_INT, 0);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glLineWidth(2);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDrawElements(GL_TRIANGLES, WirePrims->IndicesUsed, GL_UNSIGNED_INT, 0);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    WirePrims->VerticesUsed = 0;
-    WirePrims->IndicesUsed = 0;
+        WirePrims->VerticesUsed = 0;
+        WirePrims->IndicesUsed = 0;
+    }
 
     // Dots
     dd_dots_render_data *Dots = &RenderData->Dots;
-    glBindVertexArray(Dots->VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, Dots->VBO);
-    AttribUsedBytes = sizeof(vec3) * Dots->Used;
-    AttribMaxBytes = sizeof(vec3) * MAX_DOT_COUNT;
-    glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &Dots->Positions);
-    glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &Dots->Colors);
-
     UseShader(Dots->Shader);
     SetUniformMat4F(Dots->Shader, "Projection", (f32 *) &Projection, false);
     SetUniformMat4F(Dots->Shader, "View", (f32 *) &View, false);
-    glPointSize(6);
-    glDrawArrays(GL_POINTS, 0, Dots->Used);
-    Dots->Used = 0;
+    if (Dots->Used > 0)
+    {
+        glBindVertexArray(Dots->VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, Dots->VBO);
+        size_t AttribUsedBytes = sizeof(vec3) * Dots->Used;
+        size_t AttribMaxBytes = sizeof(vec3) * MAX_DOT_COUNT;
+        glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &Dots->Positions);
+        glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &Dots->Colors);
+
+        
+        glPointSize(6);
+        glDrawArrays(GL_POINTS, 0, Dots->Used);
+
+        Dots->Used = 0;
+    }
 
     // Overlay dots
     dd_dots_render_data *OverlayDots = &RenderData->OverlayDots;
-    glBindVertexArray(OverlayDots->VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, OverlayDots->VBO);
-    AttribUsedBytes = sizeof(vec3) * OverlayDots->Used;
-    AttribMaxBytes = sizeof(vec3) * MAX_DOT_COUNT;
-    glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &OverlayDots->Positions);
-    glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &OverlayDots->Colors);
+    if (OverlayDots->Used > 0)
+    {
+        glBindVertexArray(OverlayDots->VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, OverlayDots->VBO);
+        size_t AttribUsedBytes = sizeof(vec3) * OverlayDots->Used;
+        size_t AttribMaxBytes = sizeof(vec3) * MAX_DOT_COUNT;
+        glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &OverlayDots->Positions);
+        glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &OverlayDots->Colors);
 
-    glDisable(GL_DEPTH_TEST);
-    glDrawArrays(GL_POINTS, 0, OverlayDots->Used);
-    glEnable(GL_DEPTH_TEST);
-    OverlayDots->Used = 0;
+        glPointSize(6);
+        glDisable(GL_DEPTH_TEST);
+        glDrawArrays(GL_POINTS, 0, OverlayDots->Used);
+        glEnable(GL_DEPTH_TEST);
+        
+        OverlayDots->Used = 0;
+    }
 
     // Vectors
     dd_vectors_render_data *Vectors = &RenderData->Vectors;
-    glBindVertexArray(Vectors->VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, Vectors->VBO);
-    AttribUsedBytes = sizeof(vec3) * Vectors->Used;
-    AttribMaxBytes = sizeof(vec3) * MAX_VECTOR_COUNT;
-    glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &Vectors->Positions);
-    glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &Vectors->Colors);
+    if (Vectors->Used > 0)
+    {
+        glBindVertexArray(Vectors->VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, Vectors->VBO);
+        size_t AttribUsedBytes = sizeof(vec3) * Vectors->Used;
+        size_t AttribMaxBytes = sizeof(vec3) * MAX_VECTOR_COUNT;
+        glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &Vectors->Positions);
+        glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &Vectors->Colors);
 
-    glDisable(GL_DEPTH_TEST);
-    glLineWidth(2);
-    glDrawArrays(GL_LINES, 0, Vectors->Used);
-    glEnable(GL_DEPTH_TEST);
-    Vectors->Used = 0;
+        glLineWidth(2);
+        glDrawArrays(GL_LINES, 0, Vectors->Used);
+        
+        Vectors->Used = 0;
+    }
+
+    // Overlay vectors
+    dd_vectors_render_data *OverlayVectors = &RenderData->OverlayVectors;
+    if (OverlayVectors->Used > 0)
+    {
+        glBindVertexArray(OverlayVectors->VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, OverlayVectors->VBO);
+        size_t AttribUsedBytes = sizeof(vec3) * OverlayVectors->Used;
+        size_t AttribMaxBytes = sizeof(vec3) * MAX_VECTOR_COUNT;
+        glBufferSubData(GL_ARRAY_BUFFER, 0 * AttribMaxBytes, AttribUsedBytes, &OverlayVectors->Positions);
+        glBufferSubData(GL_ARRAY_BUFFER, 1 * AttribMaxBytes, AttribUsedBytes, &OverlayVectors->Colors);
+
+        glLineWidth(2);
+        glDisable(GL_DEPTH_TEST);
+        glDrawArrays(GL_LINES, 0, OverlayVectors->Used);
+        glEnable(GL_DEPTH_TEST);
+
+        OverlayVectors->Used = 0;
+    }
 }
 
 internal void

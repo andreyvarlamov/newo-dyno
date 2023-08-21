@@ -171,13 +171,14 @@ main(int Argc, char *Argv[])
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Coordinate system
-        DD_DrawVector(DDRenderData, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.0f, 0.0f });
-        DD_DrawVector(DDRenderData, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 0.0f, 5.0f, 0.0f }, vec3 { 0.0f, 1.0f, 0.0f });
-        DD_DrawVector(DDRenderData, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 0.0f, 0.0f, 5.0f }, vec3 { 0.0f, 0.0f, 1.0f });
+        DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.0f, 0.0f });
+        DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 0.0f, 5.0f, 0.0f }, vec3 { 0.0f, 1.0f, 0.0f });
+        DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 0.0f, 0.0f, 5.0f }, vec3 { 0.0f, 0.0f, 1.0f });
 
         // Camera data
         vec3 CameraTargetPosition = GetCameraTarget(&Camera); // Lol this just puts a dot in the middle of the screen. Nice one!
-        DD_DrawDot(DDRenderData, CameraTargetPosition, vec3 { 1.0f, 0.7f, 0.0f });
+        DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, CameraTargetPosition, vec3 { 1.0f, 0.7f, 0.0f });
+        DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, vec3 { 10.0f, 0.0f, 0.0f }, vec3 { 0.0f, 0.7f, 0.0f });
 
         // Primitives
         DD_DrawSphere(DDRenderData, PRIM_STYLE_FILLED, 4.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 29, 30);
