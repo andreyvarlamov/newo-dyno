@@ -10,6 +10,8 @@
 #include "DynoCamera.h"
 #include "DynoDraw.h"
 
+#define QUIT_ON_ESC 0
+
 int
 main(int Argc, char *Argv[])
 {
@@ -94,10 +96,12 @@ main(int Argc, char *Argv[])
         }
 
         const u8 *CurrentKeyStates = SDL_GetKeyboardState(0);
+#if QUIT_ON_ESC
         if (CurrentKeyStates[SDL_SCANCODE_ESCAPE])
         {
             ShouldQuit = true;
         }
+#endif
 
         i32 MouseDeltaX;
         i32 MouseDeltaY;
@@ -122,7 +126,7 @@ main(int Argc, char *Argv[])
 
         if (MiddleButtonPressed && MouseMoved)
         {
-            if (CurrentKeyStates[SDL_SCANCODE_LSHIFT] && CurrentKeyStates[SDL_SCANCODE_LALT])
+            if (CurrentKeyStates[SDL_SCANCODE_LSHIFT] && CurrentKeyStates[SDL_SCANCODE_LCTRL])
             {
                 CameraDeltaRadius = (f32) -MouseDeltaY * CameraTranslationSensitivity;
             }
@@ -131,7 +135,7 @@ main(int Argc, char *Argv[])
                 CameraTranslation.X = (f32) -MouseDeltaX * CameraTranslationSensitivity;
                 CameraTranslation.Y = (f32) MouseDeltaY * CameraTranslationSensitivity;
             }
-            else if (CurrentKeyStates[SDL_SCANCODE_LALT])
+            else if (CurrentKeyStates[SDL_SCANCODE_LCTRL])
             {
                 CameraTranslation.Z = (f32) -MouseDeltaY * CameraTranslationSensitivity;
             }
