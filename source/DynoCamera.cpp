@@ -65,9 +65,9 @@ void
 UpdateCameraPosition(dyno_camera *Camera, vec3 DeltaPositionLocal)
 {
     vec3 Front = -VecSphericalToCartesian(Camera->Theta, Camera->Phi);
-    vec3 Right = VecCrossProduct(Front, vec3 { 0.0f, 1.0f, 0.0f });
-    vec3 Up = VecCrossProduct(Right, Front);
-    mat3 LocalToWorld = Mat3FromVec3Columns(Right, Up, Front);
+    vec3 Right = VecCross(Front, vec3 { 0.0f, 1.0f, 0.0f });
+    vec3 Up = VecCross(Right, Front);
+    mat3 LocalToWorld = Mat3FromCols(Right, Up, Front);
     Camera->Position += LocalToWorld * DeltaPositionLocal;
 }
 
@@ -110,8 +110,8 @@ GetViewMat(vec3 EyePosition, vec3 TargetPoint, vec3 WorldUp)
     // Translation optimization by dot product from GLM
 
     vec3 Front = VecNormalize(TargetPoint - EyePosition);
-    vec3 Right = VecNormalize(VecCrossProduct(Front, VecNormalize(WorldUp)));
-    vec3 Up = VecCrossProduct(Right, Front);
+    vec3 Right = VecNormalize(VecCross(Front, VecNormalize(WorldUp)));
+    vec3 Up = VecCross(Right, Front);
 
     mat4 Result = Mat4Identity();
     Result.D[0][0] =  Right.X;
@@ -123,9 +123,9 @@ GetViewMat(vec3 EyePosition, vec3 TargetPoint, vec3 WorldUp)
     Result.D[2][0] =  Right.Z;
     Result.D[2][1] =  Up.Z;
     Result.D[2][2] = -Front.Z;
-    Result.D[3][0] = -VecDotProduct(Right, EyePosition);
-    Result.D[3][1] = -VecDotProduct(Up, EyePosition);
-    Result.D[3][2] =  VecDotProduct(Front, EyePosition);
+    Result.D[3][0] = -VecDot(Right, EyePosition);
+    Result.D[3][1] = -VecDot(Up, EyePosition);
+    Result.D[3][2] =  VecDot(Front, EyePosition);
 
     return Result;
 }

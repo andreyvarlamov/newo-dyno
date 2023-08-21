@@ -85,27 +85,28 @@ operator/=(vec2 &V, f32 S)
 }
 
 internal inline f32
-VecDotProduct(vec2 V0, vec2 V1)
+VecDot(vec2 V0, vec2 V1)
 {
     return (V0.X * V1.X + V0.Y * V1.Y);
 }
 
 internal inline f32
-VecLengthSqr(vec2 V)
+VecLengthSq(vec2 V)
 {
-    return VecDotProduct(V, V);
+    return VecDot(V, V);
 }
 
 internal inline f32
 VecLength(vec2 V)
 {
-    return SqrtF32(VecLengthSqr(V));
+    return SqrtF32(VecLengthSq(V));
 }
 
 internal inline vec2
 VecNormalize(vec2 V)
 {
-    return V / VecLength(V);
+    f32 Length = VecLength(V);
+    return ((Length != 0.0f) ? (V / Length) : V);
 }
 
 // -------------------------------------------------------------------------------
@@ -188,21 +189,21 @@ operator/=(vec3 &V, f32 S)
 }
 
 internal inline f32
-VecDotProduct(vec3 V0, vec3 V1)
+VecDot(vec3 V0, vec3 V1)
 {
     return (V0.X * V1.X + V0.Y * V1.Y + V0.Z * V1.Z);
 }
 
 internal inline f32
-VecLengthSqr(vec3 V)
+VecLengthSq(vec3 V)
 {
-    return VecDotProduct(V, V);
+    return VecDot(V, V);
 }
 
 internal inline f32
 VecLength(vec3 V)
 {
-    return SqrtF32(VecLengthSqr(V));
+    return SqrtF32(VecLengthSq(V));
 }
 
 internal inline vec3
@@ -213,7 +214,7 @@ VecNormalize(vec3 V)
 }
 
 internal inline vec3
-VecCrossProduct(vec3 V0, vec3 V1)
+VecCross(vec3 V0, vec3 V1)
 {
     return vec3 { V0.Y * V1.Z - V0.Z * V1.Y,
         V0.Z * V1.X - V0.X * V1.Z,
@@ -316,7 +317,7 @@ operator*(mat3 M, vec3 V)
 }
 
 internal inline mat3
-Mat3FromVec3Columns(vec3 A, vec3 B, vec3 C)
+Mat3FromCols(vec3 A, vec3 B, vec3 C)
 {
     mat3 Result = {};
 
@@ -331,6 +332,33 @@ Mat3FromVec3Columns(vec3 A, vec3 B, vec3 C)
     Result.D[2][0] = C.X;
     Result.D[2][1] = C.Y;
     Result.D[2][2] = C.Z;
+
+    return Result;
+}
+
+internal inline mat3
+Mat3GetRotationAroundAxis(vec3 Axis, f32 Angle)
+{
+    vec3 WorldNegZRotated = { -SinF32(Angle), 0.0f, -CosF32(Angle) };
+    vec3 Up = VecNormalize(Axis);
+    vec3 Right = VecNormalize(VecCross(WorldNegZRotated, Up));
+    vec3 Back = VecNormalize(VecCross(Right, Up));
+
+    mat3 Result = Mat3FromCols(Right, Up, Back);
+    return Result;
+}
+
+internal inline vec3
+Mat3GetCol(mat3 M, u32 ColumnIndex)
+{
+    Assert(ColumnIndex < 3);
+
+    vec3 Result;
+
+    for (u32 RowIndex = 0; RowIndex < 3; ++RowIndex)
+    {
+        Result.D[RowIndex] = M.D[ColumnIndex][RowIndex];
+    }
 
     return Result;
 }

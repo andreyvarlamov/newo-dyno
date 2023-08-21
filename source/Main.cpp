@@ -1,16 +1,28 @@
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 
 #include <glad/glad.h>
 #include <sdl2/SDL.h>
 
 #include "NewoCommon.h"
+#include "NewoGeometry.h"
 #include "NewoLinearMath.h"
 #include "NewoMemory.h"
 #include "DynoCamera.h"
 #include "DynoDraw.h"
 
 #define QUIT_ON_ESC 0
+
+enum test_case
+{
+    TEST_CASE_AABBS_INTERSECTION,
+    TEST_CASE_POINT_SET_BOUNDS,
+    TEST_CASE_OBB_BOUNDS,
+    TEST_CASE_COUNT
+};
+
+global_variable test_case CurrentTestCase = TEST_CASE_OBB_BOUNDS;
 
 int
 main(int Argc, char *Argv[])
@@ -65,13 +77,23 @@ main(int Argc, char *Argv[])
 
     dyno_camera Camera = InitializeCamera(vec3 { 0.0f, 0.0f, 10.0f }, 10.0f, 0.0f, 90.0f, false);
 
-    bool CameraLookAroundButtonPressed = false;
+    u8 KeyWasDown[SDL_NUM_SCANCODES] = {};
 
     bool CursorGotSwitched = true;
     bool CurrentArrow = true;
 
     SDL_Cursor *ArrowCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
     SDL_Cursor *SizeAllCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
+
+    vec3 ControlledPosition = {};
+    vec3 ControlledPosition2 = {};
+
+    f32 ControlledAngle = 0.0f;
+
+    u32 PointsUsed = 0;
+    vec3 PointSet[32];
+
+    srand((u32) time(0));
 
     SDL_Event SdlEvent;
     bool ShouldQuit = false;
@@ -124,6 +146,9 @@ main(int Argc, char *Argv[])
         bool MiddleButtonPressed = (SDL_BUTTON(2) & MouseButtonState);
         bool RightButtonPressed = (SDL_BUTTON(3) & MouseButtonState);
 
+        bool ShouldShowCameraTarget = (CurrentKeyStates[SDL_SCANCODE_LSHIFT] ||
+                                       CurrentKeyStates[SDL_SCANCODE_LCTRL] ||
+                                       MiddleButtonPressed);
         if (MiddleButtonPressed && MouseMoved)
         {
             if (CurrentKeyStates[SDL_SCANCODE_LSHIFT] && CurrentKeyStates[SDL_SCANCODE_LCTRL])
@@ -146,17 +171,30 @@ main(int Argc, char *Argv[])
             }
         }
 
+        if (LeftButtonPressed && MouseMoved)
+        {
+            ControlledAngle += (f32) MouseDeltaX * CameraRotationSensitivity;
+            if (ControlledAngle > 360.0f)
+            {
+                ControlledAngle -= 360.0f;
+            }
+            else if (ControlledAngle < 0.0f)
+            {
+                ControlledAngle += 360.0f;
+            }
+        }
+
         UpdateCameraOrientation(&Camera, CameraDeltaRadius, CameraDeltaTheta, CameraDeltaPhi);
         UpdateCameraPosition(&Camera, CameraTranslation);
 
-        if (CurrentKeyStates[SDL_SCANCODE_HOME] && !CameraLookAroundButtonPressed)
+        if (CurrentKeyStates[SDL_SCANCODE_HOME] && !KeyWasDown[SDL_SCANCODE_HOME])
         {
             Camera.IsLookAround = !Camera.IsLookAround;
-            CameraLookAroundButtonPressed = true;
+            KeyWasDown[SDL_SCANCODE_HOME] = true;
         }
         else if (!CurrentKeyStates[SDL_SCANCODE_HOME])
         {
-            CameraLookAroundButtonPressed = false;
+            KeyWasDown[SDL_SCANCODE_HOME] = false;
         }
 
         if ((MouseX > ((ScreenWidth / 2) - 5)) &&
@@ -173,6 +211,44 @@ main(int Argc, char *Argv[])
             CursorGotSwitched = false;
         }
 
+        vec3 ControlledVelocity = {};
+        vec3 ControlledVelocity2 = {};
+        f32 ControlledSpeed = 3.0f;
+        vec3 *ControlledPositionPtr = &ControlledPosition;
+        vec3 *ControlledVelocityPtr = &ControlledVelocity;
+        if (CurrentKeyStates[SDL_SCANCODE_LSHIFT] || CurrentKeyStates[SDL_SCANCODE_RSHIFT])
+        {
+            ControlledVelocityPtr = &ControlledVelocity2;
+            ControlledPositionPtr = &ControlledPosition2;
+        }
+
+        if (CurrentKeyStates[SDL_SCANCODE_UP])
+        {
+            ControlledVelocityPtr->Z -= 1.0f;
+        }
+        if (CurrentKeyStates[SDL_SCANCODE_DOWN])
+        {
+            ControlledVelocityPtr->Z += 1.0f;
+        }
+        if (CurrentKeyStates[SDL_SCANCODE_LEFT])
+        {
+            ControlledVelocityPtr->X -= 1.0f;
+        }
+        if (CurrentKeyStates[SDL_SCANCODE_RIGHT])
+        {
+            ControlledVelocityPtr->X += 1.0f;
+        }
+        if (CurrentKeyStates[SDL_SCANCODE_PAGEUP])
+        {
+            ControlledVelocityPtr->Y += 1.0f;
+        }
+        if (CurrentKeyStates[SDL_SCANCODE_PAGEDOWN])
+        {
+            ControlledVelocityPtr->Y -= 1.0f;
+        }
+        *ControlledVelocityPtr = VecNormalize(*ControlledVelocityPtr);
+        *ControlledPositionPtr += DeltaTime * ControlledSpeed * (*ControlledVelocityPtr);
+
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -182,16 +258,119 @@ main(int Argc, char *Argv[])
         DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 0.0f, 0.0f, 5.0f }, vec3 { 0.0f, 0.0f, 1.0f });
 
         // Camera data
-        vec3 CameraTargetPosition = GetCameraTarget(&Camera); // Lol this just puts a dot in the middle of the screen. Nice one!
-        DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, CameraTargetPosition, vec3 { 1.0f, 0.7f, 0.0f });
-        DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, vec3 { 10.0f, 0.0f, 0.0f }, vec3 { 0.0f, 0.7f, 0.0f });
+        if (ShouldShowCameraTarget && !Camera.IsLookAround)
+        {
+            vec3 CameraTargetPosition = GetCameraTarget(&Camera);
+            vec3 ProjTargetPosition = vec3 { CameraTargetPosition.X, 0.0f, CameraTargetPosition.Z };
+            DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, vec3 { 0.0f, 0.0f, 0.0f }, ProjTargetPosition, vec3 { 0.3f, 0.3f, 0.3f });
+            DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, CameraTargetPosition, vec3 { 0.3f, 0.3f, 0.3f });
+        }
 
-        // Primitives
-        DD_DrawSphere(DDRenderData, PRIM_STYLE_FILLED, 2.0f, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 1.0f, 1.0f, 1.0f }, 29, 30);
-        DD_DrawAABox(DDRenderData, PRIM_STYLE_TRANSPARENT, vec3 { 0.0f, 0.0f, 0.0f }, vec3 { 2.0f, 2.0f, 2.0f }, vec3 { 0.0f, 1.0f, 0.0f });
-        DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, 1.0f, vec3 { 3.0f, 0.0f, 0.0f }, vec3 { 0.0f, 1.0f, 0.0f }, 9, 10);
-        DD_DrawAABox(DDRenderData, PRIM_STYLE_FILLED, vec3 { -5.0f, 0.0f, 0.0f }, vec3 { 1.0f, 0.5f, 0.5f }, vec3 { 1.0f, 1.0f, 0.0f });
-        DD_DrawSphere(DDRenderData, PRIM_STYLE_TRANSPARENT, VecLength(vec3 { 1.0f, 0.5f, 0.5f }), vec3 { -5.0f, 0.0f, 0.0f }, vec3 { 0.0f, 0.0f, 1.0f }, 9, 10);
+        // Tests
+        switch (CurrentTestCase)
+        {
+            case TEST_CASE_AABBS_INTERSECTION:
+            {
+                //
+                // NOTE: AABBs intersection test
+                //
+                aabb A = {};
+                A.Center = ControlledPosition;
+                A.Extents = vec3 { 0.5f, 0.5f, 0.5f };
+
+                aabb B = {};
+                B.Center = vec3 { 2.0f, 0.0f, 0.0f };
+                B.Extents = vec3 { 0.5f, 0.5f, 0.5f };
+
+                bool AreIntersecting = TestAABBAABB(A, B);
+
+                vec3 Color = vec3 { 0.0f, 1.0f, 0.0f };
+
+                if (AreIntersecting)
+                {
+                    Color = vec3 { 1.0f, 1.0f, 1.0f };
+                }
+                DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, A.Center, A.Extents, Color);
+                DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, B.Center, B.Extents, Color);
+            } break;
+            case TEST_CASE_POINT_SET_BOUNDS:
+            {
+                //
+                // NOTE: AABB for an arbitrary set of points
+                //
+                glDisable(GL_CULL_FACE);
+
+                if (PointsUsed == 0)
+                {
+                    for (u32 PointIndex = 0; PointIndex < 3; ++PointIndex)
+                    {
+                        for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+                        {
+                            PointSet[PointIndex].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
+                        }
+                    }
+                    PointsUsed = 3;
+                }
+
+                if (CurrentKeyStates[SDL_SCANCODE_SPACE] && !KeyWasDown[SDL_SCANCODE_SPACE])
+                {
+                    if (CurrentKeyStates[SDL_SCANCODE_LSHIFT])
+                    {
+                        PointsUsed = 0;
+                    }
+                    else
+                    {
+                        if (PointsUsed + 1 < ArrayCount(PointSet))
+                        {
+                            for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+                            {
+                                PointSet[PointsUsed].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
+                            }
+                            PointsUsed++;
+                            KeyWasDown[SDL_SCANCODE_SPACE] = true;
+                        }
+                    }
+                }
+                else if (!CurrentKeyStates[SDL_SCANCODE_SPACE])
+                {
+                    KeyWasDown[SDL_SCANCODE_SPACE] = false;
+                }
+
+                aabb Bounds = GetAABBForPointSet(PointSet, PointsUsed);
+
+                for (u32 PointIndex = 0; PointIndex < PointsUsed; ++PointIndex)
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, PointSet[PointIndex], vec3 { 1.0f, 0.0f, 0.0f });
+                }
+                DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, Bounds.Center, Bounds.Extents, vec3 { 1.0f, 1.0f, 0.0f });
+            } break;
+            case TEST_CASE_OBB_BOUNDS:
+            {
+                //
+                // NOTE: Rotating a box and recalculating AABB around it
+                //
+                glDisable(GL_CULL_FACE);
+
+                aabb OrientedBox = {}; // Used just as an oriented box together with the BoxOrientation matrix
+                OrientedBox.Center = {};
+                OrientedBox.Extents = vec3 { 0.5f, 0.5f, 0.5f };
+                vec3 Axis = VecNormalize(ControlledPosition2 + vec3 { 0.0f, 1.0f, 0.0f } - OrientedBox.Center);
+                f32 Angle = ControlledAngle;
+                mat3 BoxOrientation = Mat3GetRotationAroundAxis(Axis, DegreesToRadians(Angle));
+
+                aabb OrientedBoxBounds;
+                UpdateAABB(OrientedBox, BoxOrientation, ControlledPosition, &OrientedBoxBounds);
+
+                DD_VisualizeRotationMat(DDRenderData, VECTOR_STYLE_DEPTHTEST, BoxOrientation, 2.0f, ControlledPosition, vec3 { 1.0f, 0.5f, 0.0f });
+                DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_TRANSPARENT, ControlledPosition, OrientedBox.Extents, BoxOrientation, vec3 { 1.0f, 0.0f, 0.0f });
+                DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, OrientedBoxBounds.Center, OrientedBoxBounds.Extents, vec3 { 1.0f, 1.0f, 0.0f });
+
+            } break;
+            default:
+            {
+                Assert(!"Unknown test case");
+            } break;
+        }
         
         mat4 ProjectionMat = GetPerspecitveProjectionMat(70.0f, (f32) ScreenWidth / (f32) ScreenHeight, 0.1f, 1000.0f);
         mat4 ViewMat = GetCameraViewMat(&Camera);

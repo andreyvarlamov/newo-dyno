@@ -10,7 +10,7 @@
 #define VERTEX_ATTRIBUTES 3
 
 #define MAX_DOT_COUNT 128
-#define MAX_VECTOR_COUNT 128
+#define MAX_VECTOR_COUNT 256
 
 struct dd_prims_render_data
 {
@@ -86,10 +86,16 @@ void
 DD_DrawAABox(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 Extents, vec3 Color);
 
 void
+DD_DrawOrientedBox(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 Extents, mat3 Orientation, vec3 Color);
+
+void
 DD_DrawDot(dd_render_data *RenderData, vector_style Style, vec3 Position, vec3 Color);
 
 void
 DD_DrawVector(dd_render_data *RenderData, vector_style Style, vec3 Start, vec3 End, vec3 EndColor);
+
+void
+DD_VisualizeRotationMat(dd_render_data *RenderData, vector_style Style, mat3 RotationMat, f32 Scale, vec3 Position, vec3 Color);
 
 void
 DD_Render(dd_render_data *RenderData, mat4 Projection, mat4 View);

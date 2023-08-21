@@ -250,6 +250,63 @@ DD_DrawAABox(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 E
 }
 
 void
+DD_DrawOrientedBox(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 Extents, mat3 Orientation, vec3 Color)
+{
+    dd_prims_render_data *Prims = GetRenderDataForPrimStyle(RenderData, Style);
+
+    u32 VerticesUsed = Prims->VerticesUsed;
+    u32 IndicesUsed = Prims->IndicesUsed;
+    Assert(VerticesUsed + 8 <= MAX_VERTEX_COUNT);
+    Assert(IndicesUsed + 36 <= MAX_INDEX_COUNT);
+
+    vec3 *Positions = &Prims->Positions[VerticesUsed];
+    vec3 *Normals = &Prims->Normals[VerticesUsed];
+    vec3 *Colors = &Prims->Colors[VerticesUsed];
+
+    Positions[0] = Position + Orientation * vec3 { -Extents.X,  Extents.Y,  Extents.Z };
+    Positions[1] = Position + Orientation * vec3 { -Extents.X, -Extents.Y,  Extents.Z };
+    Positions[2] = Position + Orientation * vec3 {  Extents.X, -Extents.Y,  Extents.Z };
+    Positions[3] = Position + Orientation * vec3 {  Extents.X,  Extents.Y,  Extents.Z };
+    Positions[4] = Position + Orientation * vec3 {  Extents.X,  Extents.Y, -Extents.Z };
+    Positions[5] = Position + Orientation * vec3 {  Extents.X, -Extents.Y, -Extents.Z };
+    Positions[6] = Position + Orientation * vec3 { -Extents.X, -Extents.Y, -Extents.Z };
+    Positions[7] = Position + Orientation * vec3 { -Extents.X,  Extents.Y, -Extents.Z };
+
+    Normals[0] = VecNormalize(Orientation * vec3 { -1.0f,  1.0f,  1.0f });
+    Normals[1] = VecNormalize(Orientation * vec3 { -1.0f, -1.0f,  1.0f });
+    Normals[2] = VecNormalize(Orientation * vec3 {  1.0f, -1.0f,  1.0f });
+    Normals[3] = VecNormalize(Orientation * vec3 {  1.0f,  1.0f,  1.0f });
+    Normals[4] = VecNormalize(Orientation * vec3 {  1.0f,  1.0f, -1.0f });
+    Normals[5] = VecNormalize(Orientation * vec3 {  1.0f, -1.0f, -1.0f });
+    Normals[6] = VecNormalize(Orientation * vec3 { -1.0f, -1.0f, -1.0f });
+    Normals[7] = VecNormalize(Orientation * vec3 { -1.0f,  1.0f, -1.0f });
+
+    for (i32 I = 0; I < 8; ++I)
+    {
+        Colors[I] = Color;
+    }
+
+    i32 *Indices = &Prims->Indices[IndicesUsed];
+
+    i32 IndicesToCopy[] = {
+        0, 1, 3,  3, 1, 2, // front
+        4, 5, 7,  7, 5, 6, // back
+        7, 0, 4,  4, 0, 3, // top
+        1, 6, 2,  2, 6, 5, // bottom
+        7, 6, 0,  0, 6, 1, // left
+        3, 2, 4,  4, 2, 5  // right
+    };
+
+    for (u32 IndexIndex = 0; IndexIndex < ArrayCount(IndicesToCopy); ++IndexIndex)
+    {
+        Indices[IndexIndex] = IndicesToCopy[IndexIndex] + VerticesUsed;
+    }
+
+    Prims->VerticesUsed += 8;
+    Prims->IndicesUsed += 36;
+}
+
+void
 DD_DrawDot(dd_render_data *RenderData, vector_style Style, vec3 Position, vec3 Color)
 {
     dd_dots_render_data *Dots;
@@ -264,6 +321,8 @@ DD_DrawDot(dd_render_data *RenderData, vector_style Style, vec3 Position, vec3 C
             Dots = &RenderData->Dots;
         } break;
     }
+
+    Assert(Dots->Used + 1 <= MAX_DOT_COUNT);
 
     Dots->Positions[Dots->Used] = Position;
     Dots->Colors[Dots->Used] = Color;
@@ -286,11 +345,51 @@ DD_DrawVector(dd_render_data *RenderData, vector_style Style, vec3 Start, vec3 E
         } break;
     }
 
+    Assert(Vectors->Used + 2 <= MAX_VECTOR_COUNT);
+
     Vectors->Positions[Vectors->Used] = Start;
     Vectors->Colors[Vectors->Used] = vec3 { 0.7f, 0.7f, 0.7f };
     Vectors->Used++;
     Vectors->Positions[Vectors->Used] = End;
     Vectors->Colors[Vectors->Used] = EndColor;
+    Vectors->Used++;
+}
+
+void
+DD_VisualizeRotationMat(dd_render_data *RenderData, vector_style Style, mat3 RotationMat, f32 Scale, vec3 Position, vec3 Color)
+{
+    dd_vectors_render_data *Vectors;
+    switch (Style)
+    {
+        case VECTOR_STYLE_OVERLAY:
+        {
+            Vectors = &RenderData->OverlayVectors;
+        } break;
+        default:
+        {
+            Vectors = &RenderData->Vectors;
+        } break;
+    }
+
+    Assert(Vectors->Used + 6 <= MAX_VECTOR_COUNT);
+
+    Vectors->Positions[Vectors->Used] = Position;
+    Vectors->Colors[Vectors->Used] = vec3 { 1.0f, 0.0f, 0.0f };
+    Vectors->Used++;
+    Vectors->Positions[Vectors->Used] = Position + Scale * Mat3GetCol(RotationMat, 0);
+    Vectors->Colors[Vectors->Used] = Color;
+    Vectors->Used++;
+    Vectors->Positions[Vectors->Used] = Position;
+    Vectors->Colors[Vectors->Used] = vec3 { 0.0f, 1.0f, 0.0f };
+    Vectors->Used++;
+    Vectors->Positions[Vectors->Used] = Position + Scale * Mat3GetCol(RotationMat, 1);
+    Vectors->Colors[Vectors->Used] = Color;
+    Vectors->Used++;
+    Vectors->Positions[Vectors->Used] = Position;
+    Vectors->Colors[Vectors->Used] = vec3 { 0.0f, 0.0f, 1.0f };
+    Vectors->Used++;
+    Vectors->Positions[Vectors->Used] = Position + Scale * Mat3GetCol(RotationMat, 2);
+    Vectors->Colors[Vectors->Used] = Color;
     Vectors->Used++;
 }
 

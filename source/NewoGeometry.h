@@ -11,6 +11,12 @@ struct plane
     f32 Distance; // Distance from origin; Distance = DotProduct(Normal, P) for a given point P on the plane
 };
 
+struct aabb
+{
+    vec3 Center;
+    vec3 Extents;
+};
+
 f32
 TriDoubleSignedArea(vec3 A, vec3 B, vec3 C);
 
@@ -55,5 +61,19 @@ VecSphericalToCartesian(f32 Theta, f32 Phi)
 
     return Result;
 }
+
+bool
+TestAABBAABB(aabb A, aabb B);
+
+void
+ExtremePointsAlongDirection(vec3 Direction, vec3 *Points, u32 PointCount, u32 *Out_MinIndex, u32 *Out_MaxIndex);
+
+aabb
+GetAABBForPointSet(vec3 *Points, u32 PointCount);
+
+// NOTE: Transform A by Transform and Translation, calculate new axis-aligned
+// extents and store in B
+void
+UpdateAABB(aabb A, mat3 Transform, vec3 Translation, aabb *Out_B);
 
 #endif
