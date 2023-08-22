@@ -133,18 +133,19 @@ IsQuadConvex(vec3 A, vec3 B, vec3 C, vec3 D)
     return (VecDot(NormalACD, NormalACB) < 0.0f);
 }
 
-i32
-PointFarthestFromEdge(vec2 A, vec2 B, vec2 *Points, i32 PointCount)
+u32
+PointFarthestFromEdge(vec2 A, vec2 B, vec2 *Points, u32 PointCount)
 {
+    Assert(Points);
+
     vec2 Edge = B - A;
     vec2 EPerp = vec2 { -Edge.Y, Edge.X };  // CCW Perpendicular
 
-    i32 BestIndex = -1;
+    u32 BestIndex = 0;
     f32 MaxValue = -FLT_MAX;
     f32 RightMostValue = -FLT_MAX;
 
-    // NOTE: This was 1 in the example (I think that's wrong)
-    for (i32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+    for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
     {
         f32 Distance = VecDot(Points[PointIndex] - A, EPerp);
         f32 R = VecDot(Points[PointIndex] - A, Edge);
@@ -184,11 +185,13 @@ TestAABBAABB(aabb A, aabb B)
 void
 ExtremePointsAlongDirection(vec3 Direction, vec3 *Points, u32 PointCount, u32 *Out_MinIndex, u32 *Out_MaxIndex)
 {
+    Assert(Points);
+
     f32 MinProjection = FLT_MAX;
     f32 MaxProjection = -FLT_MAX;
     u32 MinIndex = 0;
     u32 MaxIndex = 0;
-    for (u32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+    for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
     {
         f32 Projection = VecDot(Points[PointIndex], Direction);
 
@@ -211,6 +214,8 @@ ExtremePointsAlongDirection(vec3 Direction, vec3 *Points, u32 PointCount, u32 *O
 aabb
 GetAABBForPointSet(vec3 *Points, u32 PointCount)
 {
+    Assert(Points);
+
     aabb Result = {};
 
     for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
@@ -222,11 +227,14 @@ GetAABBForPointSet(vec3 *Points, u32 PointCount)
         u32 MaxIndex;
         ExtremePointsAlongDirection(Direction, Points, PointCount, &MinIndex, &MaxIndex);
 
-        f32 MinOnAxis = Points[MinIndex].D[AxisIndex];
-        f32 MaxOnAxis = Points[MaxIndex].D[AxisIndex];
+        //Assert(MinIndex > 0 && MaxIndex > 0);
+        {
+            f32 MinOnAxis = Points[MinIndex].D[AxisIndex];
+            f32 MaxOnAxis = Points[MaxIndex].D[AxisIndex];
 
-        Result.Extents.D[AxisIndex] = (MaxOnAxis - MinOnAxis) / 2.0f;
-        Result.Center.D[AxisIndex] = MinOnAxis + Result.Extents.D[AxisIndex];
+            Result.Extents.D[AxisIndex] = (MaxOnAxis - MinOnAxis) * 0.5f;
+            Result.Center.D[AxisIndex] = MinOnAxis + Result.Extents.D[AxisIndex];
+        }
     }
 
     return Result;
@@ -261,4 +269,97 @@ TestSphereSphere(sphere A, sphere B)
     f32 RadiusSum = A.Radius + B.Radius;
 
     return DistanceSq <= RadiusSum * RadiusSum;
+}
+
+void
+MostSeparatedPointsOnAABB(vec3 *Points, u32 PointCount, u32 *Out_MinIndex, u32 *Out_MaxIndex)
+{
+    Assert(Points);
+
+    u32 I_MinX = 0, I_MaxX = 0, I_MinY = 0, I_MaxY = 0, I_MinZ = 0, I_MaxZ = 0;
+    f32 MinX = FLT_MAX, MinY = FLT_MAX, MinZ = FLT_MAX;
+    f32 MaxX = -FLT_MAX, MaxY = -FLT_MAX, MaxZ = -FLT_MAX;
+    for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
+    {
+        if (Points[PointIndex].X < MinX) { I_MinX = PointIndex; MinX = Points[PointIndex].X; }
+        if (Points[PointIndex].X > MaxX) { I_MaxX = PointIndex; MaxX = Points[PointIndex].X; }
+        if (Points[PointIndex].Y < MinY) { I_MinY = PointIndex; MinY = Points[PointIndex].Y; }
+        if (Points[PointIndex].Y > MaxY) { I_MaxY = PointIndex; MaxY = Points[PointIndex].Y; }
+        if (Points[PointIndex].Z < MinZ) { I_MinZ = PointIndex; MinZ = Points[PointIndex].Z; }
+        if (Points[PointIndex].Z > MaxZ) { I_MaxZ = PointIndex; MaxZ = Points[PointIndex].Z; }
+    }
+
+    u32 MinIndex = 0;
+    u32 MaxIndex = 0;
+    //Assert(I_MinX > 0 && I_MaxX > 0 && I_MinY > 0 && I_MaxY > 0 && I_MinZ > 0 && I_MaxZ > 0);
+    {
+        f32 DistSqX = VecLengthSq(Points[I_MaxX] - Points[I_MinX]);
+        f32 DistSqY = VecLengthSq(Points[I_MaxY] - Points[I_MinY]);
+        f32 DistSqZ = VecLengthSq(Points[I_MaxZ] - Points[I_MinZ]);
+
+        MinIndex = I_MinX;
+        MaxIndex = I_MaxX;
+
+        if (DistSqY > DistSqX && DistSqY >= DistSqZ)
+        {
+            MinIndex = I_MinY;
+            MaxIndex = I_MaxY;
+        }
+        if (DistSqZ > DistSqX && DistSqZ > DistSqY)
+        {
+            MinIndex = I_MinZ;
+            MaxIndex = I_MaxZ;
+        }
+    }
+
+    if (Out_MinIndex) *Out_MinIndex = MinIndex;
+    if (Out_MaxIndex) *Out_MaxIndex = MaxIndex;
+}
+
+sphere
+SphereFromMostSeparatedPoints(vec3 *Points, u32 PointCount)
+{
+    Assert(Points);
+
+    u32 MinIndex, MaxIndex;
+    MostSeparatedPointsOnAABB(Points, PointCount, &MinIndex, &MaxIndex);
+
+    sphere Result = {};
+    Result.Center = (Points[MinIndex] + Points[MaxIndex]) * 0.5f;
+    Result.Radius = VecLength(Points[MaxIndex] - Result.Center);
+    return Result;
+}
+
+sphere
+SphereEncompassingSphereAndPoint(sphere Sphere, vec3 Point)
+{
+    sphere Result = Sphere;
+
+    vec3 D = Point - Sphere.Center;
+    f32 DistSq = VecLengthSq(D);
+
+    if (DistSq > Sphere.Radius * Sphere.Radius)
+    {
+        f32 Dist = SqrtF32(DistSq);
+        Result.Radius = (Sphere.Radius + Dist) * 0.5f;
+        f32 NewCenterOffset = (Result.Radius - Sphere.Radius) / Dist;
+        Result.Center += NewCenterOffset * D;
+    }
+
+    return Result;
+}
+
+sphere
+GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount)
+{
+    Assert(Points);
+
+    sphere Result = SphereFromMostSeparatedPoints(Points, PointCount);
+
+    for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
+    {
+        Result = SphereEncompassingSphereAndPoint(Result, Points[PointIndex]);
+    }
+
+    return Result;
 }

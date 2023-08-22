@@ -80,7 +80,7 @@ DD_InitializeRenderData(memory_arena *MemoryArena);
 
 void
 DD_DrawSphere(dd_render_data *RenderData, prim_style Style,
-              f32 Radius, vec3 Position, vec3 Color, u32 RingCount, u32 SectorCount);
+              vec3 Position, f32 Radius, vec3 Color, u32 RingCount, u32 SectorCount);
 
 void
 DD_DrawAABox(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 Extents, vec3 Color);

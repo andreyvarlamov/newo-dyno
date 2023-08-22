@@ -48,8 +48,8 @@ ComputePlane(vec3 A, vec3 B, vec3 C);
 bool
 IsQuadConvex(vec3 A, vec3 B, vec3 C, vec3 D);
 
-i32
-PointFarthestFromEdge(vec2 A, vec2 B, vec2 *Points, i32 PointCount);
+u32
+PointFarthestFromEdge(vec2 A, vec2 B, vec2 *Points, u32 PointCount);
 
 internal inline vec3
 VecSphericalToCartesian(f32 Theta, f32 Phi)
@@ -84,5 +84,17 @@ UpdateAABB(aabb A, mat3 Transform, vec3 Translation, aabb *Out_B);
 
 bool
 TestSphereSphere(sphere A, sphere B);
+
+void
+MostSeparatedPointsOnAABB(vec3 *Points, u32 PointCount, u32 *Out_MinIndex, u32 *Out_MaxIndex);
+
+sphere
+SphereFromMostSeparatedPoints(vec3 *Points, u32 PointCount);
+
+sphere
+SphereEncompassingSphereAndPoint(sphere Sphere, vec3 Point);
+
+sphere
+GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount);
 
 #endif
