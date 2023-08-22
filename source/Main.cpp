@@ -4,6 +4,7 @@
 
 #include <glad/glad.h>
 #include <sdl2/SDL.h>
+#include <sdl2/SDL_ttf.h>
 
 #include "NewoCommon.h"
 #include "NewoGeometry.h"
@@ -11,6 +12,7 @@
 #include "NewoMemory.h"
 #include "DynoCamera.h"
 #include "DynoDraw.h"
+#include "DynoUI.h"
 
 #define QUIT_ON_ESC 0
 
@@ -52,7 +54,9 @@ main(int Argc, char *Argv[])
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    Assert(TTF_Init() != -1);
 
     //if (SDL_SetRelativeMouseMode(SDL_TRUE) != 0)
     //{
@@ -97,6 +101,9 @@ main(int Argc, char *Argv[])
     PointSet[0] = {};
 
     srand((u32) time(0));
+    
+    //DUI_LoadFontFromFile("resource/font/FragmentMono-Italic.ttf", 18);
+    DUI_LoadFontFromFile("resource/font/PoltawskiNowy-Italic.ttf", 18);
 
     SDL_Event SdlEvent;
     bool ShouldQuit = false;
@@ -462,7 +469,6 @@ main(int Argc, char *Argv[])
                 {
                     DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, AABB.Center, AABB.Extents, vec3 { 1.0f, 1.0f, 0.0f });
                 }
-
             } break;
             default:
             {

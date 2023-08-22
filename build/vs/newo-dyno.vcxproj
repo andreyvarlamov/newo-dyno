@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\DynoCamera.cpp" />
     <ClCompile Include="..\..\source\DynoDraw.cpp" />
+    <ClCompile Include="..\..\source\DynoUI.cpp" />
     <ClCompile Include="..\..\source\Main.cpp" />
     <ClCompile Include="..\..\source\NewoGeometry.cpp" />
     <ClCompile Include="..\..\source\NewoMemory.cpp" />
@@ -29,6 +30,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\source\DynoCamera.h" />
     <ClInclude Include="..\..\source\DynoDraw.h" />
+    <ClInclude Include="..\..\source\DynoUI.h" />
     <ClInclude Include="..\..\source\NewoCommon.h" />
     <ClInclude Include="..\..\source\NewoGeometry.h" />
     <ClInclude Include="..\..\source\NewoLinearMath.h" />
