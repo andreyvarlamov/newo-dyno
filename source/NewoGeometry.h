@@ -97,4 +97,7 @@ SphereEncompassingSphereAndPoint(sphere Sphere, vec3 Point);
 sphere
 GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount);
 
+f32
+VarianceSqOfSetF32(f32 *Values, u32 ValueCount);
+
 #endif

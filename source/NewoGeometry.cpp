@@ -363,3 +363,23 @@ GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount)
 
     return Result;
 }
+
+f32
+VarianceSqOfSetF32(f32 *Values, u32 ValueCount)
+{
+    f32 Mean = 0.0f;
+    for (u32 ValueIndex = 0; ValueIndex < ValueCount; ++ValueIndex)
+    {
+        Mean += Values[ValueIndex];
+    }
+    Mean /= (f32) ValueCount;
+
+    f32 VarianceSq = 0.0f;
+    for (u32 ValueIndex = 0; ValueIndex < ValueCount; ++ValueIndex)
+    {
+        VarianceSq += (Values[ValueIndex] - Mean) * (Values[ValueIndex] - Mean);
+    }
+    VarianceSq /= (f32) ValueCount;
+
+    return VarianceSq;
+}
