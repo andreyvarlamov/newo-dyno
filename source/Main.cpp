@@ -22,11 +22,12 @@ enum test_case
     TEST_CASE_POINT_SET_AABB,
     TEST_CASE_OBB_BOUNDS,
     TEST_CASE_SPHERES_INTERSECTION,
-    TEST_CASE_POINT_SET_BOUNDING_SPHERE,
+    TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER,
+    TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTEREIGEN,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_POINT_SET_BOUNDING_SPHERE;
+global_variable test_case CurrentTestCase = TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTEREIGEN;
 
 int
 main(int Argc, char *Argv[])
@@ -103,7 +104,7 @@ main(int Argc, char *Argv[])
     srand((u32) time(0));
     
     //DUI_LoadFontFromFile("resource/font/FragmentMono-Italic.ttf", 18);
-    DUI_LoadFontFromFile("resource/font/PoltawskiNowy-Italic.ttf", 18);
+    //DUI_LoadFontFromFile("resource/font/PoltawskiNowy-Italic.ttf", 18);
 
     SDL_Event SdlEvent;
     bool ShouldQuit = false;
@@ -409,11 +410,8 @@ main(int Argc, char *Argv[])
                 DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, A.Center, A.Radius, Color, 29, 30);
                 DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, B.Center, B.Radius, Color, 29, 30);
             } break;
-            case TEST_CASE_POINT_SET_BOUNDING_SPHERE:
+            case TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER:
             {
-                //
-                // NOTE: AABB for an arbitrary set of points
-                //
                 glDisable(GL_CULL_FACE);
 
                 if (PointsUsed <= 1)
@@ -455,6 +453,64 @@ main(int Argc, char *Argv[])
                 }
 
                 sphere BoundingSphere = GetBoundingSphereForPointSetRitter(PointSet, PointsUsed);
+                aabb AABB = GetAABBForPointSet(PointSet, PointsUsed);
+
+                for (u32 PointIndex = 1; PointIndex < PointsUsed; ++PointIndex)
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, PointSet[PointIndex], vec3 { 1.0f, 0.0f, 0.0f });
+                }
+                if (BoundingSphere.Radius > 0.0f)
+                {
+                    DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, BoundingSphere.Center, BoundingSphere.Radius, vec3 { 0.0f, 0.0f, 0.5f }, 29, 30);
+                }
+                if (AABB.Extents.X > 0.0f && AABB.Extents.Y > 0.0f && AABB.Extents.Z > 0.0f)
+                {
+                    DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, AABB.Center, AABB.Extents, vec3 { 1.0f, 1.0f, 0.0f });
+                }
+            } break;
+            case TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTEREIGEN:
+            {
+                glDisable(GL_CULL_FACE);
+
+                if (PointsUsed <= 1)
+                {
+                    PointSet[0] = {};
+                    for (u32 PointIndex = 1; PointIndex < 4; ++PointIndex)
+                    {
+                        for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+                        {
+                            PointSet[PointIndex].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
+                        }
+                    }
+                    PointsUsed = 4;
+                }
+
+                if (CurrentKeyStates[SDL_SCANCODE_SPACE] && !KeyWasDown[SDL_SCANCODE_SPACE])
+                {
+                    if (CurrentKeyStates[SDL_SCANCODE_LSHIFT])
+                    {
+                        PointSet[0] = {};
+                        PointsUsed = 1;
+                    }
+                    else
+                    {
+                        if (PointsUsed + 1 < ArrayCount(PointSet))
+                        {
+                            for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+                            {
+                                PointSet[PointsUsed].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
+                            }
+                            PointsUsed++;
+                        }
+                    }
+                    KeyWasDown[SDL_SCANCODE_SPACE] = true;
+                }
+                else if (!CurrentKeyStates[SDL_SCANCODE_SPACE])
+                {
+                    KeyWasDown[SDL_SCANCODE_SPACE] = false;
+                }
+
+                sphere BoundingSphere = GetBoundingSphereForPointSetRitterEigen(PointSet, PointsUsed);
                 aabb AABB = GetAABBForPointSet(PointSet, PointsUsed);
 
                 for (u32 PointIndex = 1; PointIndex < PointsUsed; ++PointIndex)

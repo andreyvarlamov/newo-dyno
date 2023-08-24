@@ -287,6 +287,22 @@ Mat3Identity()
 }
 
 internal inline mat3
+Mat3Transpose(mat3 M)
+{
+    mat3 Result = {};
+
+    for (u32 Column = 0; Column < 3; ++Column)
+    {
+        for (u32 Row = 0; Row < 3; ++Row)
+        {
+            Result.D[Column][Row] = M.D[Row][Column];
+        }
+    }
+
+    return Result;
+}
+
+internal inline mat3
 operator*(mat3 M0, mat3 M1)
 {
     mat3 Result = {};

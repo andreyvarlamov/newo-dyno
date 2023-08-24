@@ -365,7 +365,7 @@ GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount)
 }
 
 f32
-VarianceSqOfSetF32(f32 *Values, u32 ValueCount)
+VarianceForF32Set(f32 *Values, u32 ValueCount)
 {
     f32 Mean = 0.0f;
     for (u32 ValueIndex = 0; ValueIndex < ValueCount; ++ValueIndex)
@@ -382,4 +382,196 @@ VarianceSqOfSetF32(f32 *Values, u32 ValueCount)
     VarianceSq /= (f32) ValueCount;
 
     return VarianceSq;
+}
+
+mat3
+CovarianceMatrixForPointSet(vec3 *Points, u32 PointCount)
+{
+    f32 OneOverCount = 1.0f / (f32) PointCount;
+
+    vec3 CenterOfMass = { 0.0f, 0.0f, 0.0f };
+    for (u32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+    {
+        CenterOfMass += Points[PointIndex];
+    }
+    CenterOfMass *= OneOverCount;
+
+    f32 E00, E11, E22, E01, E02, E12; E00 = E11 = E22 = E01 = E02 = E12 = 0.0f;
+
+    for (u32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+    {
+        vec3 Point = Points[PointIndex] - CenterOfMass;
+        E00 += Point.X * Point.X;
+        E00 += Point.Y * Point.Y;
+        E00 += Point.Z * Point.Z;
+        E00 += Point.X * Point.Y;
+        E00 += Point.X * Point.Z;
+        E00 += Point.Y * Point.Z;
+    }
+
+    mat3 Result;
+    Result.D[0][0] = E00 * OneOverCount;
+    Result.D[1][1] = E11 * OneOverCount;
+    Result.D[2][2] = E22 * OneOverCount;
+    Result.D[0][1] = Result.D[1][0] = E01 * OneOverCount;
+    Result.D[0][2] = Result.D[2][0] = E02 * OneOverCount;
+    Result.D[1][2] = Result.D[2][1] = E12 * OneOverCount;
+    return Result;
+}
+
+void
+SymmetricSchur2Decomposition(mat3 A, u32 P, u32 Q, f32 *Out_C, f32 *Out_S)
+{
+    f32 C, S;
+
+    if (AbsF32(A.D[P][Q]) > 0.0001f)
+    {
+        f32 R = (A.D[Q][Q] - A.D[P][P]) / (2.0f * A.D[P][Q]);
+        f32 T;
+        if (R >= 0.0f)
+        {
+            T = 1.0f / (R + SqrtF32(1.0f + R * R));
+        }
+        else
+        {
+            T = -1.0f / (-R + SqrtF32(1.0f + R * R));
+        }
+        C = 1.0f / SqrtF32(1.0f + T * T);
+        S = T * C;
+    }
+    else
+    {
+        C = 1.0f;
+        S = 0.0f;
+    }
+
+    if (Out_C) *Out_C = C;
+    if (Out_S) *Out_S = S;
+}
+
+#define JACOBI_MAX_ITERATIONS 50
+void
+JacobiEigenvalues(mat3 *A, mat3 *V)
+{
+    Assert(A);
+    Assert(V);
+
+    *V = Mat3Identity();
+
+    f32 PrevNorm = FLT_MAX;
+
+    for (u32 JacobiIteration = 0; JacobiIteration < JACOBI_MAX_ITERATIONS; ++JacobiIteration)
+    {
+        // Find largest off-diagonal absolute element A[P][Q]
+        u32 P = 0;
+        u32 Q = 1;
+        for (u32 Column = 0; Column < 3; ++Column)
+        {
+            for (u32 Row = 0; Row < 3; ++Row)
+            {
+                if (Column == Row) continue;
+                if (AbsF32(A->D[Column][Row]) > AbsF32(A->D[P][Q]))
+                {
+                    P = Column;
+                    Q = Row;
+                }
+            }
+        }
+
+        // Compute the Jacobi rotation matrix J(p, q, theta)
+        // (This code can be optimized for the three different cases of rotation)
+        f32 C, S;
+        SymmetricSchur2Decomposition(*A, P, Q, &C, &S);
+        mat3 J = Mat3Identity();
+        J.D[P][P] = C;
+        J.D[P][Q] = S;
+        J.D[Q][P] = -S;
+        J.D[Q][Q] = C;
+
+        // Cumulate rotations into what will contain the eigenvectors
+        *V = *V * J;
+
+        // Make A more diagonal, until just eigenvalues remain on diagonal
+        *A = (Mat3Transpose(J) * *A) * J;
+
+        // Compute norm of off-diagonal elements
+        f32 Norm = 0.0f;
+        for (u32 Column = 0; Column < 3; ++Column)
+        {
+            for (u32 Row = 0; Row < 3; ++Row)
+            {
+                if (Column == Row) continue;
+                Norm += A->D[Column][Row] * A->D[Column][Row];
+            }
+        }
+        // NOTE: No need to take sqrt, as we're just comparing values
+
+        // Stop when norm is no longer decreasing
+        if (JacobiIteration > 2 && Norm >= PrevNorm)
+        {
+            return;
+        }
+
+        PrevNorm = Norm;
+    }
+}
+
+sphere
+SphereFromMaximumSpreadEigen(vec3 *Points, u32 PointCount)
+{
+    // NOTE: For the particular 3 × 3 matrix used here, instead of applying a general approach
+    // such as the Jacobi method the eigenvalues could be directly computed from a simple
+    // cubic equation. The eigenvectors could then easily be found through, for example,
+    // Gaussian elimination. Such an approach is described in [Cromwell94].
+
+    mat3 Covariance = CovarianceMatrixForPointSet(Points, PointCount);
+    mat3 EigenvaluesM = Covariance;
+    mat3 EigenvectorsM;
+    JacobiEigenvalues(&EigenvaluesM, &EigenvectorsM);
+
+    // Find the largest magnitude eigenvalue (largest spread).
+    // (Find which diagonal element of EigenvaluesM is the largest magnitude.)
+#if 0
+    u32 MaxComponent = 0;
+    f32 MaxTemp;
+    f32 MaxEigenvalue = AbsF32(EigenvaluesM.D[0][0]);
+    if ((MaxTemp = AbsF32(EigenvaluesM.D[1][1])) > MaxEigenvalue) MaxComponent = 1, MaxEigenvalue = MaxTemp;
+    if ((MaxTemp = AbsF32(EigenvaluesM.D[2][2])) > MaxEigenvalue) MaxComponent = 2, MaxEigenvalue = MaxTemp;
+#else
+    // IMPORTANT: Check that this is the same
+    u32 MaxComponent = 0;
+    if (AbsF32(EigenvaluesM.D[1][1]) > AbsF32(EigenvaluesM.D[0][0])) MaxComponent = 1;
+    if (AbsF32(EigenvaluesM.D[2][2]) > AbsF32(EigenvaluesM.D[1][1])) MaxComponent = 2;
+#endif
+
+    // Get the corresponding eigenvector from EigenvectorsM (nth column)
+    vec3 MaxEigenvector = { EigenvectorsM.D[MaxComponent][0],
+                            EigenvectorsM.D[MaxComponent][1],
+                            EigenvectorsM.D[MaxComponent][2] };
+
+    // Find the most extreme points along direction of MaxEigenvector
+    u32 MinIndex, MaxIndex;
+    ExtremePointsAlongDirection(MaxEigenvector, Points, PointCount, &MinIndex, &MaxIndex);
+    vec3 MinPoint = Points[MinIndex];
+    vec3 MaxPoint = Points[MaxIndex];
+
+    f32 Distance = VecLength(MaxPoint - MinPoint);
+
+    sphere Result;
+    Result.Radius = Distance * 0.5f;
+    Result.Center = (MinPoint + MaxPoint) * 0.5f;
+    return Result;
+}
+
+sphere
+GetBoundingSphereForPointSetRitterEigen(vec3 *Points, u32 PointCount)
+{
+    sphere Result = SphereFromMaximumSpreadEigen(Points, PointCount);
+
+    for (u32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+    {
+        Result = SphereEncompassingSphereAndPoint(Result, Points[PointIndex]);
+    }
+
+    return Result;
 }

@@ -77,7 +77,7 @@ ExtremePointsAlongDirection(vec3 Direction, vec3 *Points, u32 PointCount, u32 *O
 aabb
 GetAABBForPointSet(vec3 *Points, u32 PointCount);
 
-// NOTE: Transform A by Transform and Translation, calculate new axis-aligned
+// Transform A by Transform and Translation, calculate new axis-aligned
 // extents and store in B
 void
 UpdateAABB(aabb A, mat3 Transform, vec3 Translation, aabb *Out_B);
@@ -85,19 +85,58 @@ UpdateAABB(aabb A, mat3 Transform, vec3 Translation, aabb *Out_B);
 bool
 TestSphereSphere(sphere A, sphere B);
 
+// Calculate which 2 extreme points of a point set constitute the largest separation on AABB
+// bounding the point set
 void
 MostSeparatedPointsOnAABB(vec3 *Points, u32 PointCount, u32 *Out_MinIndex, u32 *Out_MaxIndex);
 
+// Calculate a sphere from the 2 most separated points on AABB bounding a set of points
 sphere
 SphereFromMostSeparatedPoints(vec3 *Points, u32 PointCount);
 
+// Minimal sphere encompassing a sphere and a point (possibly) outside the sphere
 sphere
 SphereEncompassingSphereAndPoint(sphere Sphere, vec3 Point);
 
+// Calculate bounding sphere for a point set by finding a sphere from the 2 most separated
+// points on AABB bounding a set of points and expanding it until it envelops all points in the set
+// Ritter90 -- Ericson05 - p. 128
 sphere
 GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount);
 
 f32
-VarianceSqOfSetF32(f32 *Values, u32 ValueCount);
+VarianceForF32Set(f32 *Values, u32 ValueCount);
+
+mat3
+CovarianceMatrixForPointSet(vec3 *Points, u32 PointCount);
+
+// 2-by-2 Symmetric Schur Decomposition. Given by an n-by-n symmetric matrix A
+// and indices P, Q, such that 1 <= P < Q <= N. Computes a sine-cosine pair (S, C)
+// that will serve to form a Jacobi rotation matrix.
+// Golub96 - p.428
+void
+SymmetricSchur2Decomposition(mat3 A, u32 P, u32 Q, f32 *Out_C, f32 *Out_S);
+
+// Compute the eigenvectors and eigenvalues of the symmetric matrix A using
+// the classic Jacobi method of iteratively updating A as A = J^T * A * J,
+// where J = J(P, Q, Theta) is the Jacobi rotation matrix.
+// V will contain the eigenvectors and the diagonal elements of A are the corresponding
+// eigenvalues.
+// Golub96 - p.428
+void
+JacobiEigenvalues(mat3 *A, mat3 *V);
+
+// Calculate the sphere by finding the axis of the largest spread of a set of points
+// by using a covariance matrix and finding its eigenvalues and eigenvectors by using the Jacobi algorithm.
+sphere
+SphereFromMaximumSpreadEigen(vec3 *Points, u32 PointCount);
+
+// Calculate the bounding sphere for a point set by finding the axis of maximum spread using eigenvalues.
+// Constructing a sphere on thathen expanding it until it envelops all points in the set.
+// Ericson05 - p.93
+// NOTE: Further research on PCA (principal component analysis) - Jolliffe02
+sphere
+GetBoundingSphereForPointSetRitterEigen(vec3 *Points, u32 PointCount);
+
 
 #endif
