@@ -79,9 +79,16 @@ GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount, debug_viz_data 
 
 // Calculate the bounding sphere for a point set by finding the axis of maximum spread using eigenvalues.
 // Constructing a sphere on thathen expanding it until it envelops all points in the set.
+// Aka Wu's algorithm. Also something more that I found: https://ep.liu.se/ecp/034/009/ecp083409.pdf
 // Ericson05 - p.93
 // NOTE: Further research on PCA (principal component analysis) - Jolliffe02
 sphere
 GetBoundingSphereForPointSetRitterEigen(vec3 *Points, u32 PointCount, debug_viz_data *VizData);
+
+// Calculate bounding sphere for a point set by using the ritter method, then trying to minimize it by shrinking
+// the sphere and re-extending it to fit all points in a number of iterations
+// Ericson05 - p.99
+sphere
+GetBoundingSphereForPointSetRitterIterative(vec3 *Points, u32 PointCount, debug_viz_data *VizData);
 
 #endif

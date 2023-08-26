@@ -23,14 +23,17 @@ enum test_case
     TEST_CASE_OBB_BOUNDS,
     TEST_CASE_SPHERES_INTERSECTION,
     TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER,
-    TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTEREIGEN,
+    TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_EIGEN,
+    TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_ITERATIVE,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTEREIGEN;
+global_variable test_case CurrentTestCase = TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_ITERATIVE;
 
 void
-ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount);
+ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged);
+
+#define MAX_POINT_SET_COUNT 32
 
 void
 DrawDebugVizData(dd_render_data *DDRenderData, debug_viz_data *VizData);
@@ -104,7 +107,7 @@ main(int Argc, char *Argv[])
     f32 ControlledAngle = 0.0f;
 
     u32 PointsUsed = 1;
-    vec3 PointSet[32];
+    vec3 PointSet[MAX_POINT_SET_COUNT];
     PointSet[0] = {};
 
     //srand((u32) time(0));
@@ -319,7 +322,7 @@ main(int Argc, char *Argv[])
                 //
                 glDisable(GL_CULL_FACE);
 
-                ProcessPointSetUpdate(CurrentKeyStates, KeyWasDown, PointSet, &PointsUsed, ArrayCount(PointSet));
+                ProcessPointSetUpdate(CurrentKeyStates, KeyWasDown, PointSet, &PointsUsed, ArrayCount(PointSet), NULL);
                 for (u32 PointIndex = 1; PointIndex < PointsUsed; ++PointIndex)
                 {
                     DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, PointSet[PointIndex], vec3 { 1.0f, 0.0f, 0.0f });
@@ -388,7 +391,7 @@ main(int Argc, char *Argv[])
             {
                 glDisable(GL_CULL_FACE);
 
-                ProcessPointSetUpdate(CurrentKeyStates, KeyWasDown, PointSet, &PointsUsed, ArrayCount(PointSet));
+                ProcessPointSetUpdate(CurrentKeyStates, KeyWasDown, PointSet, &PointsUsed, ArrayCount(PointSet), NULL);
                 for (u32 PointIndex = 1; PointIndex < PointsUsed; ++PointIndex)
                 {
                     DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, PointSet[PointIndex], vec3 { 1.0f, 0.0f, 0.0f });
@@ -409,11 +412,11 @@ main(int Argc, char *Argv[])
                     }
                 }
             } break;
-            case TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTEREIGEN:
+            case TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_EIGEN:
             {
                 glDisable(GL_CULL_FACE);
 
-                ProcessPointSetUpdate(CurrentKeyStates, KeyWasDown, PointSet, &PointsUsed, ArrayCount(PointSet));
+                ProcessPointSetUpdate(CurrentKeyStates, KeyWasDown, PointSet, &PointsUsed, ArrayCount(PointSet), NULL);
                 for (u32 PointIndex = 1; PointIndex < PointsUsed; ++PointIndex)
                 {
                     DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, PointSet[PointIndex], vec3 { 1.0f, 0.0f, 0.0f });
@@ -442,6 +445,51 @@ main(int Argc, char *Argv[])
                     DrawDebugVizData(DDRenderData, &VizData);
                 }
             } break;
+            case TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_ITERATIVE:
+            {
+                glDisable(GL_CULL_FACE);
+
+                bool PointSetChanged;
+                ProcessPointSetUpdate(CurrentKeyStates, KeyWasDown, PointSet, &PointsUsed, ArrayCount(PointSet), &PointSetChanged);
+                for (u32 PointIndex = 1; PointIndex < PointsUsed; ++PointIndex)
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, PointSet[PointIndex], vec3 { 1.0f, 0.0f, 0.0f });
+                }
+
+                if (PointsUsed > 3)
+                {
+#if 0
+                    sphere BoundingSphere = GetBoundingSphereForPointSetRitter(PointSet, PointsUsed, DEBUG_VIZ_NONE);
+#else
+                    sphere BoundingSphere = GetBoundingSphereForPointSetRitterEigen(PointSet, PointsUsed, DEBUG_VIZ_NONE);
+#endif
+                    vec3 TempPointSet[MAX_POINT_SET_COUNT] = {};
+                    for (u32 PointIndex = 0; PointIndex < PointsUsed; ++PointIndex)
+                    {
+                        TempPointSet[PointIndex] = PointSet[PointIndex];
+                    }
+                    local_persist sphere BoundingSphere2;
+                    if (PointSetChanged)
+                    {
+                        BoundingSphere2 = GetBoundingSphereForPointSetRitterIterative(TempPointSet, PointsUsed, DEBUG_VIZ_NONE);
+                    }
+                    aabb AABB = GetAABBForPointSet(PointSet, PointsUsed, DEBUG_VIZ_NONE);
+
+                    if (BoundingSphere.Radius > 0.0f)
+                    {
+                        DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, BoundingSphere.Center, BoundingSphere.Radius, vec3 { 0.0f, 0.0f, 0.5f }, 29, 30);
+                    }
+                    if (BoundingSphere2.Radius > 0.0f)
+                    {
+                        DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, BoundingSphere2.Center, BoundingSphere2.Radius, vec3 { 0.5f, 0.5f, 0.0f }, 29, 30);
+                    }
+                    if (AABB.Extents.X > 0.0f && AABB.Extents.Y > 0.0f && AABB.Extents.Z > 0.0f)
+                    {
+                        DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, AABB.Center, AABB.Extents, vec3 { 1.0f, 1.0f, 0.0f });
+                    }
+                }
+
+            } break;
             default:
             {
                 Assert(!"Unknown test case");
@@ -460,9 +508,10 @@ main(int Argc, char *Argv[])
 }
 
 void
-ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount)
+ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged)
 {
     Assert(PointBufferCount > 3);
+    *PointSetChanged = false;
 
     if (*PointsUsed <= 1)
     {
@@ -475,6 +524,7 @@ ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet
             }
         }
         *PointsUsed = 4;
+        *PointSetChanged = true;
     }
 
     if (CurrentKeyStates[SDL_SCANCODE_SPACE] && !KeyWasDown[SDL_SCANCODE_SPACE])
@@ -483,6 +533,7 @@ ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet
         {
             PointSet[0] = {};
             *PointsUsed = 1;
+            *PointSetChanged = true;
         }
         else
         {
@@ -493,6 +544,7 @@ ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet
                     PointSet[*PointsUsed].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
                 }
                 (*PointsUsed)++;
+            *PointSetChanged = true;
             }
         }
         KeyWasDown[SDL_SCANCODE_SPACE] = true;

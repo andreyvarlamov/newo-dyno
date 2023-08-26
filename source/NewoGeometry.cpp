@@ -1,5 +1,7 @@
 #include "NewoGeometry.h"
 
+#include <cstdlib>
+
 #include "NewoCommon.h"
 #include "NewoMath.h"
 #include "NewoLinearMath.h"
@@ -654,6 +656,47 @@ GetBoundingSphereForPointSetRitterEigen(vec3 *Points, u32 PointCount, debug_viz_
     for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
     {
         Result = SphereEncompassingSphereAndPoint(Result, Points[PointIndex]);
+    }
+
+    return Result;
+}
+
+#define RITTER_ITERATIVE_MAX_ITERATIONS 8
+sphere
+GetBoundingSphereForPointSetRitterIterative(vec3 *Points, u32 PointCount, debug_viz_data *VizData)
+{
+    sphere Result = GetBoundingSphereForPointSetRitter(Points, PointCount, VizData);
+    
+    sphere BetterResult = Result;
+
+    for (u32 IterationIndex = 0; IterationIndex < RITTER_ITERATIVE_MAX_ITERATIONS; ++IterationIndex)
+    {
+        BetterResult.Radius = BetterResult.Radius * 0.95f;
+
+        for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
+        {
+            // Random swap of points
+            if (PointIndex < PointCount - 1)
+            {
+                i32 RandomRange = PointCount - (PointIndex + 1);
+                u32 IndexToSwap = PointIndex + 1;
+                if (RandomRange > 0)
+                {
+                    IndexToSwap += (rand() % RandomRange);
+                }
+                vec3 Temp = Points[PointIndex];
+                Points[PointIndex] = Points[IndexToSwap];
+                Points[IndexToSwap] = Temp;
+            }
+
+            BetterResult = SphereEncompassingSphereAndPoint(BetterResult, Points[PointIndex]);
+
+        }
+
+        if (BetterResult.Radius < Result.Radius)
+        {
+            Result = BetterResult;
+        }
     }
 
     return Result;
