@@ -377,7 +377,7 @@ main(int Argc, char *Argv[])
                 mat3 BoxOrientation = Mat3GetRotationAroundAxis(Axis, DegreesToRadians(Angle));
 
                 aabb OrientedBoxBounds;
-                UpdateAABB(OrientedBox, BoxOrientation, ControlledPosition, &OrientedBoxBounds);
+                GetAABBForOrientedBox(OrientedBox, BoxOrientation, ControlledPosition, &OrientedBoxBounds);
 
                 DD_VisualizeRotationMat(DDRenderData, VECTOR_STYLE_DEPTHTEST, BoxOrientation, 2.0f, ControlledPosition, vec3 { 1.0f, 0.5f, 0.0f });
                 DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_TRANSPARENT, ControlledPosition, OrientedBox.Extents, BoxOrientation, vec3 { 1.0f, 0.0f, 0.0f });

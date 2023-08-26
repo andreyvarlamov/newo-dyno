@@ -5,20 +5,27 @@
 #include "NewoLinearMath.h"
 #include "DynoDraw.h"
 
-f32
+#pragma warning(push)
+#pragma warning(disable: 4505)
+
+//
+// TRIANGLE/BARYCENTRIC (Ericson05 Ch. 3.4) ----------------------------------------
+//
+
+internal f32
 TriDoubleSignedArea(vec3 A, vec3 B, vec3 C)
 {
     vec3 Cross = VecCross(B - A, C - A);
     return VecLength(Cross);
 }
 
-f32
+internal f32
 TriDoubleArea2D(f32 X1, f32 Y1, f32 X2, f32 Y2, f32 X3, f32 Y3)
 {
     return (X1 - X2) * (Y2 - Y3) - (X2 - X3) * (Y1 - Y2);
 }
 
-void
+internal void
 BarycentricCoordsCramer(vec3 P, vec3 A, vec3 B, vec3 C, f32 *U, f32 *V, f32 *W)
 {
     vec3 V0 = B - A;
@@ -43,7 +50,7 @@ BarycentricCoordsCramer(vec3 P, vec3 A, vec3 B, vec3 C, f32 *U, f32 *V, f32 *W)
     if (U) *U = 1.0f - VCoord - WCoord;
 }
 
-void
+internal void
 BarycentricCoordsAreas(vec3 P, vec3 A, vec3 B, vec3 C, f32 *U, f32 *V, f32 *W)
 {
     f32 DoubleSignedAreaABC = TriDoubleSignedArea(A, B, C);
@@ -56,7 +63,7 @@ BarycentricCoordsAreas(vec3 P, vec3 A, vec3 B, vec3 C, f32 *U, f32 *V, f32 *W)
     if (W) *W = WCoord;
 }
 
-void
+internal void
 BarycentricCoordsProjectedAreas(vec3 P, vec3 A, vec3 B, vec3 C, f32 *U, f32 *V, f32 *W)
 {
     vec3 M = VecCross(B - A, C - A); // Unnormalzied triangle normal
@@ -99,7 +106,7 @@ BarycentricCoordsProjectedAreas(vec3 P, vec3 A, vec3 B, vec3 C, f32 *U, f32 *V, 
     if (W) *W = WCoord;
 }
 
-bool
+internal bool
 TestPointTriangle(vec3 P, vec3 A, vec3 B, vec3 C)
 {
     f32 V;
@@ -108,7 +115,12 @@ TestPointTriangle(vec3 P, vec3 A, vec3 B, vec3 C)
     return ((V >= 0.0f) && (W >= 0.0f) && ((V + W) <= 1.0f));
 }
 
-plane
+//
+// MISC GEOMETRY (Ericson05 - Ch. 3.5 - 3.6) --------------------------------------
+//
+
+// Assumes points are non-colinear and CCW
+internal plane
 ComputePlane(vec3 A, vec3 B, vec3 C)
 {
     plane Result;
@@ -119,7 +131,7 @@ ComputePlane(vec3 A, vec3 B, vec3 C)
     return Result;
 }
 
-bool
+internal bool
 IsQuadConvex(vec3 A, vec3 B, vec3 C, vec3 D)
 {
     vec3 NormalBDA = VecCross(D - B, A - B);
@@ -134,7 +146,7 @@ IsQuadConvex(vec3 A, vec3 B, vec3 C, vec3 D)
     return (VecDot(NormalACD, NormalACB) < 0.0f);
 }
 
-u32
+internal u32
 PointFarthestFromEdge(vec2 A, vec2 B, vec2 *Points, u32 PointCount)
 {
     Assert(Points);
@@ -162,28 +174,12 @@ PointFarthestFromEdge(vec2 A, vec2 B, vec2 *Points, u32 PointCount)
     return BestIndex;
 }
 
-bool
-TestAABBAABB(aabb A, aabb B)
-{
-    if (AbsF32(A.Center.X - B.Center.X) > (A.Extents.X + B.Extents.X))
-    {
-        return false;
-    }
+//
+// AABB TEST/CONSTRUCTION (Ericson05 Ch. 4.2) --------------------------------------------
+// -- Internal functions
+//
 
-    if (AbsF32(A.Center.Y - B.Center.Y) > (A.Extents.Y + B.Extents.Y))
-    {
-        return false;
-    }
-
-    if (AbsF32(A.Center.Z - B.Center.Z) > (A.Extents.Z + B.Extents.Z))
-    {
-        return false;
-    }
-
-    return true;
-}
-
-void
+internal void
 ExtremePointsAlongDirection(vec3 Direction, vec3 *Points, u32 PointCount, u32 *Out_MinIndex, u32 *Out_MaxIndex)
 {
     Assert(Points);
@@ -210,6 +206,32 @@ ExtremePointsAlongDirection(vec3 Direction, vec3 *Points, u32 PointCount, u32 *O
 
     if (Out_MinIndex) *Out_MinIndex = MinIndex;
     if (Out_MaxIndex) *Out_MaxIndex = MaxIndex;
+}
+
+//
+// AABB TEST/CONSTRUCTION (Ericson05 Ch. 4.2) --------------------------------------------
+// -- External functions
+//
+
+bool
+TestAABBAABB(aabb A, aabb B)
+{
+    if (AbsF32(A.Center.X - B.Center.X) > (A.Extents.X + B.Extents.X))
+    {
+        return false;
+    }
+
+    if (AbsF32(A.Center.Y - B.Center.Y) > (A.Extents.Y + B.Extents.Y))
+    {
+        return false;
+    }
+
+    if (AbsF32(A.Center.Z - B.Center.Z) > (A.Extents.Z + B.Extents.Z))
+    {
+        return false;
+    }
+
+    return true;
 }
 
 aabb
@@ -242,7 +264,7 @@ GetAABBForPointSet(vec3 *Points, u32 PointCount)
 }
 
 void
-UpdateAABB(aabb A, mat3 Transform, vec3 Translation, aabb *Out_B)
+GetAABBForOrientedBox(aabb A, mat3 Transform, vec3 Translation, aabb *Out_B)
 {
     // NOTE: This is equivalent to finding extreme points along the 3 cardinal directions
     // for the 8 vertices of the transformed/rotated A
@@ -262,17 +284,14 @@ UpdateAABB(aabb A, mat3 Transform, vec3 Translation, aabb *Out_B)
     }
 }
 
-bool
-TestSphereSphere(sphere A, sphere B)
-{
-    vec3 D = A.Center - B.Center;
-    f32 DistanceSq = VecLengthSq(D);
-    f32 RadiusSum = A.Radius + B.Radius;
+//
+// SPHERE TEST/CONSTRUCTION (Ericson05 - Ch. 4.3) --------------------------------------------------
+// -- Internal functions
+//
 
-    return DistanceSq <= RadiusSum * RadiusSum;
-}
-
-void
+// Calculate which 2 extreme points of a point set constitute the largest separation on AABB
+// bounding the point set
+internal void
 MostSeparatedPointsOnAABB(vec3 *Points, u32 PointCount, u32 *Out_MinIndex, u32 *Out_MaxIndex)
 {
     Assert(Points);
@@ -317,7 +336,8 @@ MostSeparatedPointsOnAABB(vec3 *Points, u32 PointCount, u32 *Out_MinIndex, u32 *
     if (Out_MaxIndex) *Out_MaxIndex = MaxIndex;
 }
 
-sphere
+// Calculate a sphere from the 2 most separated points on AABB bounding a set of points
+internal sphere
 SphereFromMostSeparatedPoints(vec3 *Points, u32 PointCount)
 {
     Assert(Points);
@@ -331,7 +351,8 @@ SphereFromMostSeparatedPoints(vec3 *Points, u32 PointCount)
     return Result;
 }
 
-sphere
+// Minimal sphere encompassing a sphere and a point (possibly) outside the sphere
+internal sphere
 SphereEncompassingSphereAndPoint(sphere Sphere, vec3 Point)
 {
     sphere Result = Sphere;
@@ -350,22 +371,7 @@ SphereEncompassingSphereAndPoint(sphere Sphere, vec3 Point)
     return Result;
 }
 
-sphere
-GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount)
-{
-    Assert(Points);
-
-    sphere Result = SphereFromMostSeparatedPoints(Points, PointCount );
-
-    for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
-    {
-        Result = SphereEncompassingSphereAndPoint(Result, Points[PointIndex]);
-    }
-
-    return Result;
-}
-
-f32
+internal f32
 VarianceForF32Set(f32 *Values, u32 ValueCount)
 {
     f32 Mean = 0.0f;
@@ -385,7 +391,7 @@ VarianceForF32Set(f32 *Values, u32 ValueCount)
     return VarianceSq;
 }
 
-mat3
+internal mat3
 CovarianceMatrixForPointSet(vec3 *Points, u32 PointCount)
 {
     Assert(Points);
@@ -423,7 +429,11 @@ CovarianceMatrixForPointSet(vec3 *Points, u32 PointCount)
     return Result;
 }
 
-void
+// 2-by-2 Symmetric Schur Decomposition. Given by an n-by-n symmetric matrix A
+// and indices P, Q, such that 1 <= P < Q <= N. Computes a sine-cosine pair (S, C)
+// that will serve to form a Jacobi rotation matrix.
+// Golub96 - p.428
+internal void
 SymmetricSchur2Decomposition(mat3 A, u32 P, u32 Q, f32 *Out_C, f32 *Out_S)
 {
     f32 C, S;
@@ -453,8 +463,14 @@ SymmetricSchur2Decomposition(mat3 A, u32 P, u32 Q, f32 *Out_C, f32 *Out_S)
     if (Out_S) *Out_S = S;
 }
 
+// Compute the eigenvectors and eigenvalues of the symmetric matrix A using
+// the classic Jacobi method of iteratively updating A as A = J^T * A * J,
+// where J = J(P, Q, Theta) is the Jacobi rotation matrix.
+// V will contain the eigenvectors and the diagonal elements of A are the corresponding
+// eigenvalues.
+// Golub96 - p.428
 #define JACOBI_MAX_ITERATIONS 50
-void
+internal void
 JacobiEigenvalues(mat3 *A, mat3 *V)
 {
     Assert(A);
@@ -520,7 +536,9 @@ JacobiEigenvalues(mat3 *A, mat3 *V)
     }
 }
 
-sphere
+// Calculate the sphere by finding the axis of the largest spread of a set of points
+// by using a covariance matrix and finding its eigenvalues and eigenvectors by using the Jacobi algorithm.
+internal sphere
 SphereFromMaximumSpreadEigen(vec3 *Points, u32 PointCount)
 {
     // NOTE: For the particular 3 × 3 matrix used here, instead of applying a general approach
@@ -549,8 +567,8 @@ SphereFromMaximumSpreadEigen(vec3 *Points, u32 PointCount)
 
     // Get the corresponding eigenvector from EigenvectorsM (nth column)
     vec3 MaxEigenvector = { EigenvectorsM.D[MaxComponent][0],
-                            EigenvectorsM.D[MaxComponent][1],
-                            EigenvectorsM.D[MaxComponent][2] };
+        EigenvectorsM.D[MaxComponent][1],
+        EigenvectorsM.D[MaxComponent][2] };
 
     // Find the most extreme points along direction of MaxEigenvector
     u32 MinIndex, MaxIndex;
@@ -566,6 +584,36 @@ SphereFromMaximumSpreadEigen(vec3 *Points, u32 PointCount)
     return Result;
 }
 
+//
+// SPHERE TEST/CONSTRUCTION (Ericson05 - Ch. 4.3) --------------------------------------------------
+// -- External functions
+//
+
+bool
+TestSphereSphere(sphere A, sphere B)
+{
+    vec3 D = A.Center - B.Center;
+    f32 DistanceSq = VecLengthSq(D);
+    f32 RadiusSum = A.Radius + B.Radius;
+
+    return DistanceSq <= RadiusSum * RadiusSum;
+}
+
+sphere
+GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount)
+{
+    Assert(Points);
+
+    sphere Result = SphereFromMostSeparatedPoints(Points, PointCount );
+
+    for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
+    {
+        Result = SphereEncompassingSphereAndPoint(Result, Points[PointIndex]);
+    }
+
+    return Result;
+}
+
 sphere
 GetBoundingSphereForPointSetRitterEigen(vec3 *Points, u32 PointCount)
 {
@@ -578,3 +626,5 @@ GetBoundingSphereForPointSetRitterEigen(vec3 *Points, u32 PointCount)
 
     return Result;
 }
+
+#pragma warning(pop)
