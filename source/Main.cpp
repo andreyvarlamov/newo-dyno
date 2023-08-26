@@ -29,6 +29,12 @@ enum test_case
 
 global_variable test_case CurrentTestCase = TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTEREIGEN;
 
+void
+ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount);
+
+void
+DrawDebugVizData(dd_render_data *DDRenderData, debug_viz_data *VizData);
+
 int
 main(int Argc, char *Argv[])
 {
@@ -295,7 +301,7 @@ main(int Argc, char *Argv[])
                 B.Center = vec3 { 2.0f, 0.0f, 0.0f };
                 B.Extents = vec3 { 0.5f, 0.5f, 0.5f };
 
-                bool AreIntersecting = TestAABBAABB(A, B);
+                bool AreIntersecting = TestAABBAABB(A, B, DEBUG_VIZ_NONE);
 
                 vec3 Color = vec3 { 1.0f, 1.0f, 1.0f };
 
@@ -313,53 +319,20 @@ main(int Argc, char *Argv[])
                 //
                 glDisable(GL_CULL_FACE);
 
-                if (PointsUsed <= 1)
-                {
-                    PointSet[0] = {};
-                    for (u32 PointIndex = 1; PointIndex < 4; ++PointIndex)
-                    {
-                        for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
-                        {
-                            PointSet[PointIndex].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
-                        }
-                    }
-                    PointsUsed = 4;
-                }
-
-                if (CurrentKeyStates[SDL_SCANCODE_SPACE] && !KeyWasDown[SDL_SCANCODE_SPACE])
-                {
-                    if (CurrentKeyStates[SDL_SCANCODE_LSHIFT])
-                    {
-                        PointSet[0] = {};
-                        PointsUsed = 1;
-                    }
-                    else
-                    {
-                        if (PointsUsed + 1 < ArrayCount(PointSet))
-                        {
-                            for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
-                            {
-                                PointSet[PointsUsed].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
-                            }
-                            PointsUsed++;
-                        }
-                    }
-                    KeyWasDown[SDL_SCANCODE_SPACE] = true;
-                }
-                else if (!CurrentKeyStates[SDL_SCANCODE_SPACE])
-                {
-                    KeyWasDown[SDL_SCANCODE_SPACE] = false;
-                }
-
-                aabb AABB = GetAABBForPointSet(PointSet, PointsUsed);
-
+                ProcessPointSetUpdate(CurrentKeyStates, KeyWasDown, PointSet, &PointsUsed, ArrayCount(PointSet));
                 for (u32 PointIndex = 1; PointIndex < PointsUsed; ++PointIndex)
                 {
                     DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, PointSet[PointIndex], vec3 { 1.0f, 0.0f, 0.0f });
                 }
-                if (AABB.Extents.X > 0.0f && AABB.Extents.Y > 0.0f && AABB.Extents.Z > 0.0f)
+
+                if (PointsUsed > 3)
                 {
-                    DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, AABB.Center, AABB.Extents, vec3 { 1.0f, 1.0f, 0.0f });
+                    aabb AABB = GetAABBForPointSet(PointSet, PointsUsed, DEBUG_VIZ_NONE);
+
+                    if (AABB.Extents.X > 0.0f && AABB.Extents.Y > 0.0f && AABB.Extents.Z > 0.0f)
+                    {
+                        DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, AABB.Center, AABB.Extents, vec3 { 1.0f, 1.0f, 0.0f });
+                    }
                 }
             } break;
             case TEST_CASE_OBB_BOUNDS:
@@ -377,7 +350,7 @@ main(int Argc, char *Argv[])
                 mat3 BoxOrientation = Mat3GetRotationAroundAxis(Axis, DegreesToRadians(Angle));
 
                 aabb OrientedBoxBounds;
-                GetAABBForOrientedBox(OrientedBox, BoxOrientation, ControlledPosition, &OrientedBoxBounds);
+                GetAABBForOrientedBox(OrientedBox, BoxOrientation, ControlledPosition, &OrientedBoxBounds, DEBUG_VIZ_NONE);
 
                 DD_VisualizeRotationMat(DDRenderData, VECTOR_STYLE_DEPTHTEST, BoxOrientation, 2.0f, ControlledPosition, vec3 { 1.0f, 0.5f, 0.0f });
                 DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_TRANSPARENT, ControlledPosition, OrientedBox.Extents, BoxOrientation, vec3 { 1.0f, 0.0f, 0.0f });
@@ -399,7 +372,7 @@ main(int Argc, char *Argv[])
                 B.Center = { 4.0f, 0.0f, 0.0f };
                 B.Radius = 2.0f;
 
-                bool AreIntersecting = TestSphereSphere(A, B);
+                bool AreIntersecting = TestSphereSphere(A, B, DEBUG_VIZ_NONE);
 
                 vec3 Color = vec3 { 1.0f, 1.0f, 1.0f };
 
@@ -415,121 +388,58 @@ main(int Argc, char *Argv[])
             {
                 glDisable(GL_CULL_FACE);
 
-                if (PointsUsed <= 1)
-                {
-                    PointSet[0] = {};
-                    for (u32 PointIndex = 1; PointIndex < 4; ++PointIndex)
-                    {
-                        for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
-                        {
-                            PointSet[PointIndex].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
-                        }
-                    }
-                    PointsUsed = 4;
-                }
-
-                if (CurrentKeyStates[SDL_SCANCODE_SPACE] && !KeyWasDown[SDL_SCANCODE_SPACE])
-                {
-                    if (CurrentKeyStates[SDL_SCANCODE_LSHIFT])
-                    {
-                        PointSet[0] = {};
-                        PointsUsed = 1;
-                    }
-                    else
-                    {
-                        if (PointsUsed + 1 < ArrayCount(PointSet))
-                        {
-                            for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
-                            {
-                                PointSet[PointsUsed].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
-                            }
-                            PointsUsed++;
-                        }
-                    }
-                    KeyWasDown[SDL_SCANCODE_SPACE] = true;
-                }
-                else if (!CurrentKeyStates[SDL_SCANCODE_SPACE])
-                {
-                    KeyWasDown[SDL_SCANCODE_SPACE] = false;
-                }
-
-                sphere BoundingSphere = GetBoundingSphereForPointSetRitter(PointSet, PointsUsed);
-                aabb AABB = GetAABBForPointSet(PointSet, PointsUsed);
-
+                ProcessPointSetUpdate(CurrentKeyStates, KeyWasDown, PointSet, &PointsUsed, ArrayCount(PointSet));
                 for (u32 PointIndex = 1; PointIndex < PointsUsed; ++PointIndex)
                 {
                     DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, PointSet[PointIndex], vec3 { 1.0f, 0.0f, 0.0f });
                 }
-                if (BoundingSphere.Radius > 0.0f)
+
+                if (PointsUsed > 3)
                 {
-                    DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, BoundingSphere.Center, BoundingSphere.Radius, vec3 { 0.0f, 0.0f, 0.5f }, 29, 30);
-                }
-                if (AABB.Extents.X > 0.0f && AABB.Extents.Y > 0.0f && AABB.Extents.Z > 0.0f)
-                {
-                    DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, AABB.Center, AABB.Extents, vec3 { 1.0f, 1.0f, 0.0f });
+                    sphere BoundingSphere = GetBoundingSphereForPointSetRitter(PointSet, PointsUsed, DEBUG_VIZ_NONE);
+                    aabb AABB = GetAABBForPointSet(PointSet, PointsUsed, DEBUG_VIZ_NONE);
+
+                    if (BoundingSphere.Radius > 0.0f)
+                    {
+                        DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, BoundingSphere.Center, BoundingSphere.Radius, vec3 { 0.0f, 0.0f, 0.5f }, 29, 30);
+                    }
+                    if (AABB.Extents.X > 0.0f && AABB.Extents.Y > 0.0f && AABB.Extents.Z > 0.0f)
+                    {
+                        DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, AABB.Center, AABB.Extents, vec3 { 1.0f, 1.0f, 0.0f });
+                    }
                 }
             } break;
             case TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTEREIGEN:
             {
                 glDisable(GL_CULL_FACE);
 
-                if (PointsUsed <= 1)
-                {
-                    PointSet[0] = {};
-                    for (u32 PointIndex = 1; PointIndex < 4; ++PointIndex)
-                    {
-                        for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
-                        {
-                            PointSet[PointIndex].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
-                        }
-                    }
-                    PointsUsed = 4;
-                }
-
-                if (CurrentKeyStates[SDL_SCANCODE_SPACE] && !KeyWasDown[SDL_SCANCODE_SPACE])
-                {
-                    if (CurrentKeyStates[SDL_SCANCODE_LSHIFT])
-                    {
-                        PointSet[0] = {};
-                        PointsUsed = 1;
-                    }
-                    else
-                    {
-                        if (PointsUsed + 1 < ArrayCount(PointSet))
-                        {
-                            for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
-                            {
-                                PointSet[PointsUsed].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
-                            }
-                            PointsUsed++;
-                        }
-                    }
-                    KeyWasDown[SDL_SCANCODE_SPACE] = true;
-                }
-                else if (!CurrentKeyStates[SDL_SCANCODE_SPACE])
-                {
-                    KeyWasDown[SDL_SCANCODE_SPACE] = false;
-                }
-
-                sphere BoundingSphere = GetBoundingSphereForPointSetRitter(PointSet, PointsUsed);
-                sphere BoundingSphere2 = GetBoundingSphereForPointSetRitterEigen(PointSet, PointsUsed);
-                aabb AABB = GetAABBForPointSet(PointSet, PointsUsed);
-
+                ProcessPointSetUpdate(CurrentKeyStates, KeyWasDown, PointSet, &PointsUsed, ArrayCount(PointSet));
                 for (u32 PointIndex = 1; PointIndex < PointsUsed; ++PointIndex)
                 {
                     DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, PointSet[PointIndex], vec3 { 1.0f, 0.0f, 0.0f });
                 }
-                if (BoundingSphere.Radius > 0.0f)
+
+                if (PointsUsed > 3)
                 {
-                    DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, BoundingSphere.Center, BoundingSphere.Radius, vec3 { 0.0f, 0.0f, 0.5f }, 29, 30);
-                }
-                if (BoundingSphere2.Radius > 0.0f)
-                {
-                    DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, BoundingSphere2.Center, BoundingSphere2.Radius, vec3 { 0.5f, 0.5f, 0.0f }, 29, 30);
-                }
-                if (AABB.Extents.X > 0.0f && AABB.Extents.Y > 0.0f && AABB.Extents.Z > 0.0f)
-                {
-                    DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, AABB.Center, AABB.Extents, vec3 { 1.0f, 1.0f, 0.0f });
+                    debug_viz_data VizData = {};
+                    sphere BoundingSphere = GetBoundingSphereForPointSetRitter(PointSet, PointsUsed, DEBUG_VIZ_NONE);
+                    sphere BoundingSphere2 = GetBoundingSphereForPointSetRitterEigen(PointSet, PointsUsed, &VizData);
+                    aabb AABB = GetAABBForPointSet(PointSet, PointsUsed, DEBUG_VIZ_NONE);
+
+                    if (BoundingSphere.Radius > 0.0f)
+                    {
+                        DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, BoundingSphere.Center, BoundingSphere.Radius, vec3 { 0.0f, 0.0f, 0.5f }, 29, 30);
+                    }
+                    if (BoundingSphere2.Radius > 0.0f)
+                    {
+                        DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, BoundingSphere2.Center, BoundingSphere2.Radius, vec3 { 0.5f, 0.5f, 0.0f }, 29, 30);
+                    }
+                    if (AABB.Extents.X > 0.0f && AABB.Extents.Y > 0.0f && AABB.Extents.Z > 0.0f)
+                    {
+                        DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, AABB.Center, AABB.Extents, vec3 { 1.0f, 1.0f, 0.0f });
+                    }
+
+                    DrawDebugVizData(DDRenderData, &VizData);
                 }
             } break;
             default:
@@ -547,4 +457,62 @@ main(int Argc, char *Argv[])
 
     SDL_Quit();
     return 0;
+}
+
+void
+ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount)
+{
+    Assert(PointBufferCount > 3);
+
+    if (*PointsUsed <= 1)
+    {
+        PointSet[0] = {};
+        for (u32 PointIndex = 1; PointIndex < 4; ++PointIndex)
+        {
+            for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+            {
+                PointSet[PointIndex].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
+            }
+        }
+        *PointsUsed = 4;
+    }
+
+    if (CurrentKeyStates[SDL_SCANCODE_SPACE] && !KeyWasDown[SDL_SCANCODE_SPACE])
+    {
+        if (CurrentKeyStates[SDL_SCANCODE_LSHIFT])
+        {
+            PointSet[0] = {};
+            *PointsUsed = 1;
+        }
+        else
+        {
+            if (*PointsUsed + 1 < PointBufferCount)
+            {
+                for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+                {
+                    PointSet[*PointsUsed].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
+                }
+                (*PointsUsed)++;
+            }
+        }
+        KeyWasDown[SDL_SCANCODE_SPACE] = true;
+    }
+    else if (!CurrentKeyStates[SDL_SCANCODE_SPACE])
+    {
+        KeyWasDown[SDL_SCANCODE_SPACE] = false;
+    }
+}
+
+void
+DrawDebugVizData(dd_render_data *DDRenderData, debug_viz_data *VizData)
+{
+    for (u32 DotIndex = 0; DotIndex < VizData->DotsUsed; ++DotIndex)
+    {
+        DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, VizData->Dots[DotIndex], VizData->DotColors[DotIndex]);
+    }
+
+    for (u32 VectorIndex = 0; VectorIndex < VizData->VectorsUsed; ++VectorIndex)
+    {
+        DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, VizData->VectorStarts[VectorIndex], VizData->VectorEnds[VectorIndex], VizData->VectorColors[VectorIndex]);
+    }
 }

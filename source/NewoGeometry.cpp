@@ -9,6 +9,35 @@
 #pragma warning(disable: 4505)
 
 //
+// VISUALIZATION --------------------------------------------------------------
+//
+
+internal void
+AddVizDot(debug_viz_data *VizData, vec3 Position, vec3 Color)
+{
+    if (VizData != DEBUG_VIZ_NONE)
+    {
+        Assert(VizData->DotsUsed < DEBUG_VIZ_DOTS);
+        VizData->Dots[VizData->DotsUsed] = Position;
+        VizData->DotColors[VizData->DotsUsed] = Color;
+        VizData->DotsUsed++;
+    }
+}
+
+internal void
+AddVizVector(debug_viz_data *VizData, vec3 Start, vec3 End, vec3 Color)
+{
+    if (VizData != DEBUG_VIZ_NONE)
+    {
+        Assert(VizData->VectorsUsed < DEBUG_VIZ_VECTORS);
+        VizData->VectorStarts[VizData->VectorsUsed] = Start;
+        VizData->VectorEnds[VizData->VectorsUsed] = End;
+        VizData->VectorColors[VizData->VectorsUsed] = Color;
+        VizData->VectorsUsed++;
+    }
+}
+
+//
 // TRIANGLE/BARYCENTRIC (Ericson05 Ch. 3.4) ----------------------------------------
 //
 
@@ -214,7 +243,7 @@ ExtremePointsAlongDirection(vec3 Direction, vec3 *Points, u32 PointCount, u32 *O
 //
 
 bool
-TestAABBAABB(aabb A, aabb B)
+TestAABBAABB(aabb A, aabb B, debug_viz_data *VizData)
 {
     if (AbsF32(A.Center.X - B.Center.X) > (A.Extents.X + B.Extents.X))
     {
@@ -235,7 +264,7 @@ TestAABBAABB(aabb A, aabb B)
 }
 
 aabb
-GetAABBForPointSet(vec3 *Points, u32 PointCount)
+GetAABBForPointSet(vec3 *Points, u32 PointCount, debug_viz_data *VizData)
 {
     Assert(Points);
 
@@ -264,7 +293,7 @@ GetAABBForPointSet(vec3 *Points, u32 PointCount)
 }
 
 void
-GetAABBForOrientedBox(aabb A, mat3 Transform, vec3 Translation, aabb *Out_B)
+GetAABBForOrientedBox(aabb A, mat3 Transform, vec3 Translation, aabb *Out_B, debug_viz_data *VizData)
 {
     // NOTE: This is equivalent to finding extreme points along the 3 cardinal directions
     // for the 8 vertices of the transformed/rotated A
@@ -539,7 +568,7 @@ JacobiEigenvalues(mat3 *A, mat3 *V)
 // Calculate the sphere by finding the axis of the largest spread of a set of points
 // by using a covariance matrix and finding its eigenvalues and eigenvectors by using the Jacobi algorithm.
 internal sphere
-SphereFromMaximumSpreadEigen(vec3 *Points, u32 PointCount)
+SphereFromMaximumSpreadEigen(vec3 *Points, u32 PointCount, debug_viz_data *VizData)
 {
     // NOTE: For the particular 3 × 3 matrix used here, instead of applying a general approach
     // such as the Jacobi method the eigenvalues could be directly computed from a simple
@@ -575,12 +604,15 @@ SphereFromMaximumSpreadEigen(vec3 *Points, u32 PointCount)
     ExtremePointsAlongDirection(MaxEigenvector, Points, PointCount, &MinIndex, &MaxIndex);
     vec3 MinPoint = Points[MinIndex];
     vec3 MaxPoint = Points[MaxIndex];
+    AddVizDot(VizData, MinPoint, vec3 { 1.0f, 1.0f, 1.0f });
+    AddVizDot(VizData, MaxPoint, vec3 { 1.0f, 1.0f, 1.0f });
 
     f32 Distance = VecLength(MaxPoint - MinPoint);
 
     sphere Result;
     Result.Radius = Distance * 0.5f;
     Result.Center = (MinPoint + MaxPoint) * 0.5f;
+    AddVizVector(VizData, Result.Center - 10.0f * MaxEigenvector, Result.Center + 10.0f * MaxEigenvector, vec3 { 1.0f, 1.0f, 1.0f });
     return Result;
 }
 
@@ -590,7 +622,7 @@ SphereFromMaximumSpreadEigen(vec3 *Points, u32 PointCount)
 //
 
 bool
-TestSphereSphere(sphere A, sphere B)
+TestSphereSphere(sphere A, sphere B, debug_viz_data *VizData)
 {
     vec3 D = A.Center - B.Center;
     f32 DistanceSq = VecLengthSq(D);
@@ -600,7 +632,7 @@ TestSphereSphere(sphere A, sphere B)
 }
 
 sphere
-GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount)
+GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount, debug_viz_data *VizData)
 {
     Assert(Points);
 
@@ -615,9 +647,9 @@ GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount)
 }
 
 sphere
-GetBoundingSphereForPointSetRitterEigen(vec3 *Points, u32 PointCount)
+GetBoundingSphereForPointSetRitterEigen(vec3 *Points, u32 PointCount, debug_viz_data *VizData)
 {
-    sphere Result = SphereFromMaximumSpreadEigen(Points, PointCount);
+    sphere Result = SphereFromMaximumSpreadEigen(Points, PointCount, VizData);
 
     for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
     {
