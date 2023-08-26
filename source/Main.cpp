@@ -101,7 +101,8 @@ main(int Argc, char *Argv[])
     vec3 PointSet[32];
     PointSet[0] = {};
 
-    srand((u32) time(0));
+    //srand((u32) time(0));
+    srand(123);
     
     //DUI_LoadFontFromFile("resource/font/FragmentMono-Italic.ttf", 18);
     //DUI_LoadFontFromFile("resource/font/PoltawskiNowy-Italic.ttf", 18);
@@ -510,7 +511,8 @@ main(int Argc, char *Argv[])
                     KeyWasDown[SDL_SCANCODE_SPACE] = false;
                 }
 
-                sphere BoundingSphere = GetBoundingSphereForPointSetRitterEigen(PointSet, PointsUsed);
+                sphere BoundingSphere = GetBoundingSphereForPointSetRitter(PointSet, PointsUsed);
+                sphere BoundingSphere2 = GetBoundingSphereForPointSetRitterEigen(PointSet, PointsUsed);
                 aabb AABB = GetAABBForPointSet(PointSet, PointsUsed);
 
                 for (u32 PointIndex = 1; PointIndex < PointsUsed; ++PointIndex)
@@ -520,6 +522,10 @@ main(int Argc, char *Argv[])
                 if (BoundingSphere.Radius > 0.0f)
                 {
                     DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, BoundingSphere.Center, BoundingSphere.Radius, vec3 { 0.0f, 0.0f, 0.5f }, 29, 30);
+                }
+                if (BoundingSphere2.Radius > 0.0f)
+                {
+                    DD_DrawSphere(DDRenderData, PRIM_STYLE_WIREFRAME, BoundingSphere2.Center, BoundingSphere2.Radius, vec3 { 0.5f, 0.5f, 0.0f }, 29, 30);
                 }
                 if (AABB.Extents.X > 0.0f && AABB.Extents.Y > 0.0f && AABB.Extents.Z > 0.0f)
                 {

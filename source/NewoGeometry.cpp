@@ -3,6 +3,7 @@
 #include "NewoCommon.h"
 #include "NewoMath.h"
 #include "NewoLinearMath.h"
+#include "DynoDraw.h"
 
 f32
 TriDoubleSignedArea(vec3 A, vec3 B, vec3 C)
@@ -354,7 +355,7 @@ GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount)
 {
     Assert(Points);
 
-    sphere Result = SphereFromMostSeparatedPoints(Points, PointCount);
+    sphere Result = SphereFromMostSeparatedPoints(Points, PointCount );
 
     for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
     {
@@ -387,10 +388,13 @@ VarianceForF32Set(f32 *Values, u32 ValueCount)
 mat3
 CovarianceMatrixForPointSet(vec3 *Points, u32 PointCount)
 {
-    f32 OneOverCount = 1.0f / (f32) PointCount;
+    Assert(Points);
+    Assert(PointCount > 1);
+
+    f32 OneOverCount = 1.0f / (f32) (PointCount - 1);
 
     vec3 CenterOfMass = { 0.0f, 0.0f, 0.0f };
-    for (u32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+    for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
     {
         CenterOfMass += Points[PointIndex];
     }
@@ -398,15 +402,15 @@ CovarianceMatrixForPointSet(vec3 *Points, u32 PointCount)
 
     f32 E00, E11, E22, E01, E02, E12; E00 = E11 = E22 = E01 = E02 = E12 = 0.0f;
 
-    for (u32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+    for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
     {
         vec3 Point = Points[PointIndex] - CenterOfMass;
         E00 += Point.X * Point.X;
-        E00 += Point.Y * Point.Y;
-        E00 += Point.Z * Point.Z;
-        E00 += Point.X * Point.Y;
-        E00 += Point.X * Point.Z;
-        E00 += Point.Y * Point.Z;
+        E11 += Point.Y * Point.Y;
+        E22 += Point.Z * Point.Z;
+        E01 += Point.X * Point.Y;
+        E02 += Point.X * Point.Z;
+        E12 += Point.Y * Point.Z;
     }
 
     mat3 Result;
@@ -538,7 +542,6 @@ SphereFromMaximumSpreadEigen(vec3 *Points, u32 PointCount)
     if ((MaxTemp = AbsF32(EigenvaluesM.D[1][1])) > MaxEigenvalue) MaxComponent = 1, MaxEigenvalue = MaxTemp;
     if ((MaxTemp = AbsF32(EigenvaluesM.D[2][2])) > MaxEigenvalue) MaxComponent = 2, MaxEigenvalue = MaxTemp;
 #else
-    // IMPORTANT: Check that this is the same
     u32 MaxComponent = 0;
     if (AbsF32(EigenvaluesM.D[1][1]) > AbsF32(EigenvaluesM.D[0][0])) MaxComponent = 1;
     if (AbsF32(EigenvaluesM.D[2][2]) > AbsF32(EigenvaluesM.D[1][1])) MaxComponent = 2;
@@ -568,7 +571,7 @@ GetBoundingSphereForPointSetRitterEigen(vec3 *Points, u32 PointCount)
 {
     sphere Result = SphereFromMaximumSpreadEigen(Points, PointCount);
 
-    for (u32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+    for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
     {
         Result = SphereEncompassingSphereAndPoint(Result, Points[PointIndex]);
     }

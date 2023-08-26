@@ -4,6 +4,7 @@
 #include "NewoCommon.h"
 #include "NewoMath.h"
 #include "NewoLinearMath.h"
+#include "DynoDraw.h"
 
 struct plane
 {
@@ -137,6 +138,5 @@ SphereFromMaximumSpreadEigen(vec3 *Points, u32 PointCount);
 // NOTE: Further research on PCA (principal component analysis) - Jolliffe02
 sphere
 GetBoundingSphereForPointSetRitterEigen(vec3 *Points, u32 PointCount);
-
 
 #endif
