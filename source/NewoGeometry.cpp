@@ -855,4 +855,128 @@ TestOBBOBB(obb A, obb B, debug_viz_data *VizData)
     return true;
 }
 
+//
+// NOTE: SSV (Sphere-swept volumes) Tests
+// -- Internal functions
+//
+
+f32 SegmentPointDistSq(vec3 Start, vec3 End, vec3 Point)
+{
+    vec3 AB = End - Start;
+    vec3 AC = Point - Start;
+    vec3 BC = Point - End;
+
+    f32 Proj = VecDot(AC, AB);
+    if (Proj <= 0.0f) return VecLengthSq(AC);
+    f32 SegmentLengthSq = VecLengthSq(AB);
+    if (Proj >= SegmentLengthSq) return VecLengthSq(BC);
+    f32 DistSq = VecLengthSq(AC) - Proj * Proj / SegmentLengthSq;
+    return DistSq;
+}
+
+f32 SegmentSegmentClosestPoint(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
+                               f32 *Out_S, f32 *Out_T, vec3 *Out_PointOnA, vec3 *Out_PointOnB)
+{
+    vec3 ADir = AEnd - AStart;
+    vec3 BDir = BEnd - BStart;
+    f32 ALengthSq = VecLengthSq(ADir);
+    f32 BLengthSq = VecLengthSq(BDir);
+
+    f32 S, T;
+
+    if (ALengthSq <= FLT_EPSILON && BLengthSq <= FLT_EPSILON)
+    {
+        // NOTE: Both lines degenerate -> Distance between points
+        if (Out_S) *Out_S = 0.0f;
+        if (Out_T) *Out_T = 0.0f;
+        if (Out_PointOnA) *Out_PointOnA = AStart;
+        if (Out_PointOnB) *Out_PointOnB = BStart;
+        return VecLengthSq(AStart - BStart);
+    }
+    else
+    {
+        vec3 R = AStart - BStart;
+        f32 ProjOnB = VecDot(R, BDir);
+        if (ALengthSq <= FLT_EPSILON)
+        {
+            // NOTE: Line A degenerate -> Distance between point A and line B
+            S = 0.0f;
+            T = ClampF32(ProjOnB / BLengthSq, 0.0f, 1.0f);
+        }
+        else
+        {
+            f32 ProjOnA = VecDot(R, ADir);
+            if (BLengthSq <= FLT_EPSILON)
+            {
+                // NOTE: Line B degenerate -> Distance between line A and point B
+                S = ClampF32(-ProjOnA / ALengthSq, 0.0f, 1.0f);
+                T = 0.0f;
+            }
+            else
+            {
+                // NOTE: General non-degenerate case
+                f32 Proj = VecDot(ADir, BDir);
+                f32 Denom = ALengthSq * BLengthSq - Proj * Proj;
+
+                // If segments are parallel pick any S, else compute closest point on line A to line B
+                // and clamp to the segment A.
+                if (Denom <= FLT_EPSILON)
+                {
+                    S = 0.0f;
+                }
+                else
+                {
+                    S = ClampF32((Proj * ProjOnB - ProjOnA * BLengthSq) / Denom, 0.0f, 1.0f);
+                }
+
+                // Compute point on line B closest to segment A
+                T = (Proj * S + ProjOnB) / BLengthSq;
+
+                // If T in [0, 1] -> done. Else clamp T and recompute S
+                if (T < 0.0f)
+                {
+                    S = ClampF32(-ProjOnA / ALengthSq, 0.0f, 1.0f);
+                    T = 0.0f;
+                }
+                else if (T > 1.0f)
+                {
+                    S = ClampF32((Proj - ProjOnA) / ALengthSq, 0.0f, 1.0f);
+                    T = 1.0f;
+                }
+            }
+        }
+    }
+
+    vec3 PointOnA = AStart + ADir * S;
+    vec3 PointOnB = BStart + BDir * T;
+    if (Out_S) *Out_S = S;
+    if (Out_T) *Out_T = T;
+    if (Out_PointOnA) *Out_PointOnA = PointOnA;
+    if (Out_PointOnB) *Out_PointOnB = PointOnB;
+    return VecLengthSq(PointOnA - PointOnB);
+}
+
+//
+// NOTE: SSV (Sphere-swept volumes) Tests
+// -- External functions
+//
+
+bool
+TestSphereCapsule(sphere S, capsule C)
+{
+    f32 DistSq = SegmentPointDistSq(C.Start, C.End, S.Center);
+    f32 Radius = S.Radius + C.Radius;
+    bool Result = (DistSq <= Radius * Radius);
+    return Result;
+}
+
+bool
+TestCapsuleCapsule(capsule A, capsule B)
+{
+    f32 DistSq = SegmentSegmentClosestPoint(A.Start, A.End, B.Start, B.End, NULL, NULL, NULL, NULL);
+    f32 Radius = A.Radius + B.Radius;
+    bool Result = (DistSq <= Radius * Radius);
+    return Result;
+}
+
 #pragma warning(pop)

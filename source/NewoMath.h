@@ -50,4 +50,12 @@ ArcSinF32(f32 Value)
     return asinf(Value);
 }
 
+internal inline f32
+ClampF32(f32 Value, f32 Min, f32 Max)
+{
+    if (Value < Min) return Min;
+    if (Value > Max) return Max;
+    return Value;
+}
+
 #endif

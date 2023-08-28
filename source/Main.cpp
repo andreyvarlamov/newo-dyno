@@ -26,11 +26,12 @@ enum test_case
     TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_EIGEN,
     TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_ITERATIVE,
     TEST_CASE_OBBS_INTERSECTION,
+    TEST_CASE_SEGMENT_SEGMENT_CLOSEST_POINT,
     TEST_CASE_DRAW_CAPSULE,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_DRAW_CAPSULE;
+global_variable test_case CurrentTestCase = TEST_CASE_SEGMENT_SEGMENT_CLOSEST_POINT;
 
 void
 ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged);
@@ -562,6 +563,25 @@ main(int Argc, char *Argv[])
 
                 DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_WIREFRAME, A.Center, A.Extents, Mat3FromCols(A.Axes), Color);
                 DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_WIREFRAME, B.Center, B.Extents, Mat3FromCols(B.Axes), Color);
+            } break;
+            case TEST_CASE_SEGMENT_SEGMENT_CLOSEST_POINT:
+            {
+                vec3 AStart = vec3 { -1.0f, 0.0f, 0.0f } + vec3 { ControlledPosition.X, -ControlledPosition.Z, 0.0f };
+                vec3 AEnd = vec3 { -1.0f, 1.0f, 0.0f } + vec3 { ControlledPosition2.X, -ControlledPosition2.Z, 0.0f };
+                vec3 BStart = vec3 { 1.0f, 0.0f, 0.0f } + vec3 { ControlledPosition3.X, -ControlledPosition3.Z, 0.0f };
+                vec3 BEnd = vec3 { 1.0f, 1.0f, 0.0f } + vec3 { ControlledPosition4.X, -ControlledPosition4.Z, 0.0f };
+
+                f32 S, T;
+                vec3 PointOnA, PointOnB;
+                f32 DistSq = SegmentSegmentClosestPoint(AStart, AEnd, BStart, BEnd, &S, &T, &PointOnA, &PointOnB);    
+                printf("DistSq = %.3f; S (on A) = %.3f; T (on B) = %.3f\n", DistSq, S, T);
+
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, PointOnA, vec3 { 0.0f, 1.0f, 0.0f });
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, PointOnB, vec3 { 0.0f, 1.0f, 0.0f });
+
+
+                DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, AStart, AEnd, vec3 { 1.0f, 1.0f, 1.0f });
+                DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, BStart, BEnd, vec3 { 1.0f, 1.0f, 1.0f });
             } break;
             case TEST_CASE_DRAW_CAPSULE:
             {

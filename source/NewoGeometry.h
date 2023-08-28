@@ -124,4 +124,13 @@ TestOBBOBB(obb A, obb B, debug_viz_data *VizData);
 
 // NOTE: For more info on computing tight OBBs about polyhedra, other references, see Ericson05 p. 108-112
 
+f32 SegmentSegmentClosestPoint(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
+                               f32 *Out_S, f32 *Out_T, vec3 *Out_PointOnA, vec3 *Out_PointOnB);
+
+bool
+TestSphereCapsule(sphere S, capsule C);
+
+bool
+TestCapsuleCapsule(capsule A, capsule B);
+
 #endif
