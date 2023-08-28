@@ -41,6 +41,13 @@ struct sphere
     f32 Radius;
 };
 
+struct obb
+{
+    vec3 Center;
+    vec3 Axes[3];
+    vec3 Extents;
+};
+
 #define DEBUG_VIZ_DOTS 64
 #define DEBUG_VIZ_VECTORS 64
 // Don't know if this is a good idea
@@ -90,5 +97,17 @@ GetBoundingSphereForPointSetRitterEigen(vec3 *Points, u32 PointCount, debug_viz_
 // Ericson05 - p.99
 sphere
 GetBoundingSphereForPointSetRitterIterative(vec3 *Points, u32 PointCount, debug_viz_data *VizData);
+
+// Exact minimum sphere using Welzl algorithm.
+// Not implementing it now, as I don't know how to compute exact sphere for 0-4 support points.
+// And the algorithm doesn't seem that useful for real-time game applications.
+// Ericson05 - p.100
+// sphere
+// WelzlSphere(vec3 *Points, u32 PointCount, vec3 SetOfSupportPoints, u32 SetOfSupportPointCount);
+
+bool
+TestOBBOBB(obb A, obb B, debug_viz_data *VizData);
+
+// NOTE: For more info on computing tight OBBs about polyhedra, other references, see Ericson05 p. 108-112
 
 #endif

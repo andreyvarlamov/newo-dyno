@@ -1,5 +1,6 @@
 #include "NewoGeometry.h"
 
+#include <cfloat>
 #include <cstdlib>
 
 #include "NewoCommon.h"
@@ -700,6 +701,158 @@ GetBoundingSphereForPointSetRitterIterative(vec3 *Points, u32 PointCount, debug_
     }
 
     return Result;
+}
+
+
+//
+// OBB TEST/CONSTRUCTION (Ericson05 - Ch. 4.4) --------------------------------------------------
+// -- Internal functions
+//
+
+
+//
+// OBB TEST/CONSTRUCTION (Ericson05 - Ch. 4.4) --------------------------------------------------
+// -- External functions
+//
+
+bool
+TestOBBOBB(obb A, obb B, debug_viz_data *VizData)
+{
+    // Rotation matrix expressing B in A's coordinate frame
+    mat3 Rotation;
+    for (u32 Column = 0; Column < 3; ++Column)
+    {
+        for (u32 Row = 0; Row < 3; ++Row)
+        {
+            Rotation.D[Column][Row] = VecDot(A.Axes[Row], B.Axes[Column]);
+        }
+    }
+
+    // Translation vector from A to B
+    vec3 Translation = B.Center - A.Center;
+    // Bring it into A's coordinate frame
+    Translation = vec3 { VecDot(Translation, A.Axes[0]),
+                         VecDot(Translation, A.Axes[1]),
+                         VecDot(Translation, A.Axes[2]) };
+
+    // Compute common subexpressions. Add in an epsilon term to counteract arithmetic errors
+    // when two edges are parallel and their cross product is (near) 0.
+    mat3 AbsRotation;
+    for (u32 Column = 0; Column < 3; ++Column)
+    {
+        for (u32 Row = 0; Row < 3; ++Row)
+        {
+            AbsRotation.D[Column][Row] = AbsF32(Rotation.D[Column][Row]) + FLT_EPSILON;
+        }
+    }
+
+    f32 RadiusA, RadiusB;
+
+    // NOTE: The 15 axes to be tested defined in Ericson05 - p.103, Table 4.1
+
+    // Test axes L = A0, L = A1, L = A2
+    for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+    {
+        RadiusA = A.Extents.D[AxisIndex];
+        RadiusB = (B.Extents.D[0] * AbsRotation.D[0][AxisIndex] +
+                   B.Extents.D[1] * AbsRotation.D[1][AxisIndex] +
+                   B.Extents.D[2] * AbsRotation.D[2][AxisIndex]);
+        if (AbsF32(Translation.D[AxisIndex]) > RadiusA + RadiusB)
+        {
+            return false;
+        }
+    }
+
+    // Test axes L = B0, L = B1, L = B2
+    for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+    {
+        RadiusA = (A.Extents.D[0] * AbsRotation.D[AxisIndex][0] +
+                   A.Extents.D[1] * AbsRotation.D[AxisIndex][1] +
+                   A.Extents.D[2] * AbsRotation.D[AxisIndex][2]);
+        RadiusB = B.Extents.D[AxisIndex];
+        f32 ProjT = (Translation.D[0] * Rotation.D[AxisIndex][0] +
+                     Translation.D[1] * Rotation.D[AxisIndex][1] +
+                     Translation.D[2] * Rotation.D[AxisIndex][2]);
+        if (AbsF32(ProjT) > RadiusA + RadiusB)
+        {
+            return false;
+        }
+    }
+
+    // Test axis L = A0 x B0
+    RadiusA = A.Extents.D[1] * AbsRotation.D[0][2] + A.Extents.D[2] * AbsRotation.D[0][1];
+    RadiusB = B.Extents.D[1] * AbsRotation.D[2][0] + B.Extents.D[2] * AbsRotation.D[1][0];
+    if (AbsF32(Translation.D[2] * Rotation.D[0][1] - Translation.D[1] * Rotation.D[0][2]) > RadiusA + RadiusB)
+    {
+        return false;
+    }
+
+    // Test axis L = A0 x B1
+    RadiusA = A.Extents.D[1] * AbsRotation.D[1][2] + A.Extents.D[2] * AbsRotation.D[1][1];
+    RadiusB = B.Extents.D[0] * AbsRotation.D[2][0] + B.Extents.D[2] * AbsRotation.D[0][0];
+    if (AbsF32(Translation.D[2] * Rotation.D[1][1] - Translation.D[1] * Rotation.D[1][2]) > RadiusA + RadiusB)
+    {
+        return false;
+    }
+
+    // Test axis L = A0 x B2
+    RadiusA = A.Extents.D[1] * AbsRotation.D[2][2] + A.Extents.D[2] * AbsRotation.D[2][1];
+    RadiusB = B.Extents.D[0] * AbsRotation.D[1][0] + B.Extents.D[1] * AbsRotation.D[0][0];
+    if (AbsF32(Translation.D[2] * Rotation.D[2][1] - Translation.D[1] * Rotation.D[2][2]) > RadiusA + RadiusB)
+    {
+        return false;
+    }
+
+    // Test axis L = A1 x B0
+    RadiusA = A.Extents.D[0] * AbsRotation.D[0][2] + A.Extents.D[2] * AbsRotation.D[0][0];
+    RadiusB = B.Extents.D[1] * AbsRotation.D[2][1] + B.Extents.D[2] * AbsRotation.D[1][1];
+    if (AbsF32(Translation.D[0] * Rotation.D[0][2] - Translation.D[2] * Rotation.D[0][0]) > RadiusA + RadiusB)
+    {
+        return false;
+    }
+
+    // Test axis L = A1 x B1
+    RadiusA = A.Extents.D[0] * AbsRotation.D[1][2] + A.Extents.D[2] * AbsRotation.D[1][0];
+    RadiusB = B.Extents.D[0] * AbsRotation.D[2][1] + B.Extents.D[2] * AbsRotation.D[0][1];
+    if (AbsF32(Translation.D[0] * Rotation.D[1][2] - Translation.D[2] * Rotation.D[1][0]) > RadiusA + RadiusB)
+    {
+        return false;
+    }
+
+    // Test axis L = A1 x B2
+    RadiusA = A.Extents.D[0] * AbsRotation.D[2][2] + A.Extents.D[2] * AbsRotation.D[2][0];
+    RadiusB = B.Extents.D[0] * AbsRotation.D[1][1] + B.Extents.D[1] * AbsRotation.D[0][1];
+    if (AbsF32(Translation.D[0] * Rotation.D[2][2] - Translation.D[2] * Rotation.D[2][0]) > RadiusA + RadiusB)
+    {
+        return false;
+    }
+
+    // Test axis L = A2 x B0
+    RadiusA = A.Extents.D[0] * AbsRotation.D[0][1] + A.Extents.D[1] * AbsRotation.D[0][0];
+    RadiusB = B.Extents.D[1] * AbsRotation.D[2][2] + B.Extents.D[2] * AbsRotation.D[1][2];
+    if (AbsF32(Translation.D[1] * Rotation.D[0][0] - Translation.D[0] * Rotation.D[0][1]) > RadiusA + RadiusB)
+    {
+        return false;
+    }
+
+    // Test axis L = A2 x B1
+    RadiusA = A.Extents.D[0] * AbsRotation.D[1][1] + A.Extents.D[1] * AbsRotation.D[1][0];
+    RadiusB = B.Extents.D[0] * AbsRotation.D[2][2] + B.Extents.D[2] * AbsRotation.D[0][2];
+    if (AbsF32(Translation.D[1] * Rotation.D[1][0] - Translation.D[0] * Rotation.D[1][1]) > RadiusA + RadiusB)
+    {
+        return false;
+    }
+
+    // Test axis L = A2 x B2
+    RadiusA = A.Extents.D[0] * AbsRotation.D[2][1] + A.Extents.D[1] * AbsRotation.D[2][0];
+    RadiusB = B.Extents.D[0] * AbsRotation.D[1][2] + B.Extents.D[1] * AbsRotation.D[0][2];
+    if (AbsF32(Translation.D[1] * Rotation.D[2][0] - Translation.D[0] * Rotation.D[2][1]) > RadiusA + RadiusB)
+    {
+        return false;
+    }
+
+    // No separating axis found, must be intersecting
+    return true;
 }
 
 #pragma warning(pop)

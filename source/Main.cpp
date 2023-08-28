@@ -25,10 +25,11 @@ enum test_case
     TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER,
     TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_EIGEN,
     TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_ITERATIVE,
+    TEST_CASE_OBBS_INTERSECTION,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_ITERATIVE;
+global_variable test_case CurrentTestCase = TEST_CASE_OBBS_INTERSECTION;
 
 void
 ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged);
@@ -103,8 +104,11 @@ main(int Argc, char *Argv[])
 
     vec3 ControlledPosition = {};
     vec3 ControlledPosition2 = {};
+    vec3 ControlledPosition3 = {};
+    vec3 ControlledPosition4 = {};
 
     f32 ControlledAngle = 0.0f;
+    f32 ControlledAngle2 = 0.0f;
 
     u32 PointsUsed = 1;
     vec3 PointSet[MAX_POINT_SET_COUNT];
@@ -193,16 +197,23 @@ main(int Argc, char *Argv[])
             }
         }
 
-        if (LeftButtonPressed && MouseMoved)
+        f32 *ControlledAnglePtr = &ControlledAngle;
+        if (CurrentKeyStates[SDL_SCANCODE_LALT] || CurrentKeyStates[SDL_SCANCODE_RALT])
         {
-            ControlledAngle += (f32) MouseDeltaX * CameraRotationSensitivity;
-            if (ControlledAngle > 360.0f)
+            ControlledAnglePtr = &ControlledAngle2;
+        }
+
+        if ((CurrentKeyStates[SDL_SCANCODE_LSHIFT] || CurrentKeyStates[SDL_SCANCODE_RSHIFT])
+            && LeftButtonPressed && MouseMoved)
+        {
+            *ControlledAnglePtr += (f32) MouseDeltaX * CameraRotationSensitivity;
+            if (*ControlledAnglePtr > 360.0f)
             {
-                ControlledAngle -= 360.0f;
+                *ControlledAnglePtr -= 360.0f;
             }
-            else if (ControlledAngle < 0.0f)
+            else if (*ControlledAnglePtr < 0.0f)
             {
-                ControlledAngle += 360.0f;
+                *ControlledAnglePtr += 360.0f;
             }
         }
 
@@ -235,13 +246,28 @@ main(int Argc, char *Argv[])
 
         vec3 ControlledVelocity = {};
         vec3 ControlledVelocity2 = {};
+        vec3 ControlledVelocity3 = {};
+        vec3 ControlledVelocity4 = {};
         f32 ControlledSpeed = 3.0f;
         vec3 *ControlledPositionPtr = &ControlledPosition;
         vec3 *ControlledVelocityPtr = &ControlledVelocity;
+        if (CurrentKeyStates[SDL_SCANCODE_LALT] || CurrentKeyStates[SDL_SCANCODE_RALT])
+        {
+            ControlledVelocityPtr = &ControlledVelocity3;
+            ControlledPositionPtr = &ControlledPosition3;
+        }
         if (CurrentKeyStates[SDL_SCANCODE_LSHIFT] || CurrentKeyStates[SDL_SCANCODE_RSHIFT])
         {
-            ControlledVelocityPtr = &ControlledVelocity2;
-            ControlledPositionPtr = &ControlledPosition2;
+            if (CurrentKeyStates[SDL_SCANCODE_LALT] || CurrentKeyStates[SDL_SCANCODE_RALT])
+            {
+                ControlledVelocityPtr = &ControlledVelocity4;
+                ControlledPositionPtr = &ControlledPosition4;
+            }
+            else
+            {
+                ControlledVelocityPtr = &ControlledVelocity2;
+                ControlledPositionPtr = &ControlledPosition2;
+            }
         }
 
         if (CurrentKeyStates[SDL_SCANCODE_UP])
@@ -490,6 +516,50 @@ main(int Argc, char *Argv[])
                 }
 
             } break;
+            case TEST_CASE_OBBS_INTERSECTION:
+            {
+                //
+                // NOTE: Test intersection of 2 oriented boxes using Separating Axis Theorem
+                //
+
+                obb A;
+                A.Center = ControlledPosition;
+                A.Extents = { 0.5f, 0.5f, 0.5f };
+                vec3 OrientationAxisPoint = vec3 { 0.0f, 1.0f, 0.0f } + ControlledPosition2;
+                Mat3GetCols(Mat3GetRotationAroundAxis(VecNormalize(OrientationAxisPoint), 
+                                                      DegreesToRadians(ControlledAngle)),
+                            A.Axes);
+                obb B;
+                B.Center = vec3 { 3.0f, 0.0f, 0.0f } + ControlledPosition3;
+                B.Extents = { 1.0f, 0.5f, 0.5f };
+                vec3 OrientationAxisPoint2 = vec3 { 0.0f, 1.0f, 0.0f } + ControlledPosition4;
+                Mat3GetCols(Mat3GetRotationAroundAxis(VecNormalize(OrientationAxisPoint2),
+                                                      DegreesToRadians(ControlledAngle2)),
+                            B.Axes);
+                vec3 Color = { 1.0f, 1.0f, 1.0f };
+                if (TestOBBOBB(A, B, DEBUG_VIZ_NONE))
+                {
+                    Color = { 0.0f, 1.0f, 0.0f };
+                }
+                if (CurrentKeyStates[SDL_SCANCODE_LSHIFT] || CurrentKeyStates[SDL_SCANCODE_RSHIFT])
+                {
+                    if (CurrentKeyStates[SDL_SCANCODE_LALT] || CurrentKeyStates[SDL_SCANCODE_RALT])
+                    {
+                        DD_VisualizeRotationMat(DDRenderData, VECTOR_STYLE_DEPTHTEST, Mat3FromCols(B.Axes), 2.0f,
+                                                B.Center, vec3 { 1.0f, 0.5f, 0.0f });
+                        DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, B.Center + OrientationAxisPoint2, vec3 { 0.0f, 1.0f, 0.0f });
+                    }
+                    else
+                    {
+                        DD_VisualizeRotationMat(DDRenderData, VECTOR_STYLE_DEPTHTEST, Mat3FromCols(A.Axes), 2.0f,
+                                                ControlledPosition, vec3 { 1.0f, 0.5f, 0.0f });
+                        DD_DrawDot(DDRenderData, VECTOR_STYLE_DEPTHTEST, A.Center + OrientationAxisPoint, vec3 { 0.0f, 1.0f, 0.0f });
+                    }
+                }
+
+                DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_WIREFRAME, A.Center, A.Extents, Mat3FromCols(A.Axes), Color);
+                DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_WIREFRAME, B.Center, B.Extents, Mat3FromCols(B.Axes), Color);
+            } break;
             default:
             {
                 Assert(!"Unknown test case");
@@ -511,7 +581,7 @@ void
 ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged)
 {
     Assert(PointBufferCount > 3);
-    *PointSetChanged = false;
+    if (PointSetChanged) *PointSetChanged = false;
 
     if (*PointsUsed <= 1)
     {
@@ -524,7 +594,7 @@ ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet
             }
         }
         *PointsUsed = 4;
-        *PointSetChanged = true;
+        if (PointSetChanged) *PointSetChanged = true;
     }
 
     if (CurrentKeyStates[SDL_SCANCODE_SPACE] && !KeyWasDown[SDL_SCANCODE_SPACE])
@@ -533,7 +603,7 @@ ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet
         {
             PointSet[0] = {};
             *PointsUsed = 1;
-            *PointSetChanged = true;
+            if (PointSetChanged) *PointSetChanged = true;
         }
         else
         {
@@ -544,7 +614,7 @@ ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet
                     PointSet[*PointsUsed].D[AxisIndex] = ((f32) (rand() % 255) * 10.0f / 255.0f) - 5.0f;
                 }
                 (*PointsUsed)++;
-            *PointSetChanged = true;
+                if (PointSetChanged) *PointSetChanged = true;
             }
         }
         KeyWasDown[SDL_SCANCODE_SPACE] = true;

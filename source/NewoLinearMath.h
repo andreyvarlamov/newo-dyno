@@ -353,6 +353,28 @@ Mat3FromCols(vec3 A, vec3 B, vec3 C)
 }
 
 internal inline mat3
+Mat3FromCols(vec3 *Cols)
+{
+    Assert(Cols);
+
+    mat3 Result = {};
+
+    Result.D[0][0] = Cols[0].X;
+    Result.D[0][1] = Cols[0].Y;
+    Result.D[0][2] = Cols[0].Z;
+
+    Result.D[1][0] = Cols[1].X;
+    Result.D[1][1] = Cols[1].Y;
+    Result.D[1][2] = Cols[1].Z;
+
+    Result.D[2][0] = Cols[2].X;
+    Result.D[2][1] = Cols[2].Y;
+    Result.D[2][2] = Cols[2].Z;
+
+    return Result;
+}
+
+internal inline mat3
 Mat3GetRotationAroundAxis(vec3 Axis, f32 Angle)
 {
     vec3 WorldNegZRotated = { -SinF32(Angle), 0.0f, -CosF32(Angle) };
@@ -377,6 +399,20 @@ Mat3GetCol(mat3 M, u32 ColumnIndex)
     }
 
     return Result;
+}
+
+internal inline void
+Mat3GetCols(mat3 M, vec3 *Out_Cols)
+{
+    Assert(Out_Cols);
+
+    for (u32 ColIndex = 0; ColIndex < 3; ++ColIndex)
+    {
+        for (u32 RowIndex = 0; RowIndex < 3; ++RowIndex)
+        {
+            Out_Cols[ColIndex].D[RowIndex] = M.D[ColIndex][RowIndex];
+        }
+    }
 }
 
 // -------------------------------------------------------------------------------
