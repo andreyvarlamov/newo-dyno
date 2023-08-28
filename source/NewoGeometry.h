@@ -48,6 +48,20 @@ struct obb
     vec3 Extents;
 };
 
+struct capsule
+{
+    vec3 Start;
+    vec3 End;
+    f32 Radius;
+};
+
+struct lozenge
+{
+    vec3 Origin;
+    vec3 Edges[2];
+    f32 Radius;
+};
+
 #define DEBUG_VIZ_DOTS 64
 #define DEBUG_VIZ_VECTORS 64
 // Don't know if this is a good idea

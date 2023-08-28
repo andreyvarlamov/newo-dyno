@@ -26,10 +26,11 @@ enum test_case
     TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_EIGEN,
     TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_ITERATIVE,
     TEST_CASE_OBBS_INTERSECTION,
+    TEST_CASE_DRAW_CAPSULE,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_OBBS_INTERSECTION;
+global_variable test_case CurrentTestCase = TEST_CASE_DRAW_CAPSULE;
 
 void
 ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged);
@@ -522,6 +523,8 @@ main(int Argc, char *Argv[])
                 // NOTE: Test intersection of 2 oriented boxes using Separating Axis Theorem
                 //
 
+                glDisable(GL_CULL_FACE);
+
                 obb A;
                 A.Center = ControlledPosition;
                 A.Extents = { 0.5f, 0.5f, 0.5f };
@@ -559,6 +562,24 @@ main(int Argc, char *Argv[])
 
                 DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_WIREFRAME, A.Center, A.Extents, Mat3FromCols(A.Axes), Color);
                 DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_WIREFRAME, B.Center, B.Extents, Mat3FromCols(B.Axes), Color);
+            } break;
+            case TEST_CASE_DRAW_CAPSULE:
+            {
+                capsule A;
+                A.Start = vec3 { 0.0f, 0.0f, 0.0f } + ControlledPosition;
+                A.End = vec3 { 0.0f, 1.0f, 0.0f } + ControlledPosition + ControlledPosition2;
+                A.Radius = 1.0f;
+
+                capsule B;
+                B.Start = vec3 { 5.0f, 0.0f, 0.0f } + ControlledPosition3;
+                B.End = vec3 { 5.0f, 1.0f, 0.0f } + ControlledPosition3 + ControlledPosition4;
+                B.Radius = 1.5f;
+
+                DD_DrawVector(DDRenderData, VECTOR_STYLE_DEPTHTEST, A.Start, A.End, vec3 { 1.0f, 0.0f, 0.0f });
+                DD_DrawVector(DDRenderData, VECTOR_STYLE_DEPTHTEST, B.Start, B.End, vec3 { 1.0f, 0.0f, 0.0f });
+
+                DD_DrawCapsule(DDRenderData, PRIM_STYLE_TRANSPARENT, A.Start, A.End, A.Radius, vec3 { 1.0f, 1.0f, 1.0f }, 15, 30);
+                DD_DrawCapsule(DDRenderData, PRIM_STYLE_TRANSPARENT, B.Start, B.End, B.Radius, vec3 { 1.0f, 1.0f, 0.0f }, 15, 30);
             } break;
             default:
             {

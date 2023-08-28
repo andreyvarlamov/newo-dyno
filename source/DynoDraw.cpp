@@ -193,6 +193,148 @@ DD_DrawSphere(dd_render_data *RenderData, prim_style Style,
 }
 
 void
+DD_DrawCapsule(dd_render_data *RenderData, prim_style Style,
+              vec3 Base, vec3 Top, f32 Radius, vec3 Color, u32 HalfRingCount, u32 SectorCount)
+{
+    f32 SegmentLength = VecLength(Top - Base);
+    vec3 Axis = (Top - Base) / SegmentLength;
+    vec3 YAlignedTop = SegmentLength * vec3 { 0.0f, 1.0f, 0.0f };
+    mat3 Rotation = Mat3GetRotationAroundAxis(Axis, 0.0f);
+
+    u32 RingCount = HalfRingCount * 2 - 1;
+    Assert(RingCount > 2);
+    Assert(SectorCount > 2);
+
+    dd_prims_render_data *Prims = GetRenderDataForPrimStyle(RenderData, Style);
+
+    u32 VerticesUsed = Prims->VerticesUsed;
+    u32 IndicesUsed = Prims->IndicesUsed;
+    u32 ExpectedVertexCount = 2 + (RingCount + 1 - 2) * SectorCount;
+    u32 ExpectedIndexCount = (RingCount + 1 - 2) * SectorCount * 6;
+    Assert(VerticesUsed + ExpectedVertexCount <= MAX_VERTEX_COUNT);
+    Assert(IndicesUsed + ExpectedIndexCount <= MAX_INDEX_COUNT);
+
+    vec3 *Positions = &Prims->Positions[VerticesUsed];
+    vec3 *Normals = &Prims->Normals[VerticesUsed];
+    vec3 *Colors = &Prims->Colors[VerticesUsed];
+
+    u32 VertexIndex = 0;
+
+    f32 SphereRadius = Radius;
+
+    bool WorkingOnBottomHalf = false;
+
+    for (u32 RingIndex = 0; RingIndex < RingCount; ++RingIndex)
+    {
+        if (RingIndex == 0)
+        {
+            Positions[VertexIndex] = Rotation * (vec3 { 0.0f, SphereRadius, 0.0f } + YAlignedTop) + Base;
+            Normals[VertexIndex] = vec3 { 0.0f, 1.0f, 0.0f };
+            Colors[VertexIndex] = Color;
+            VertexIndex++;
+        }
+        else if (RingIndex == (RingCount - 1))
+        {
+            // At RingIndex = RingCount - 1 -> VerticalAngle = -PI/2 -> cos = 0; 0 radius ring -> south pole
+            Positions[VertexIndex] = Rotation * vec3 { 0.0f, -SphereRadius, 0.0f } + Base;
+            Normals[VertexIndex] = vec3 { 0.0f, -1.0f, 0.0f };
+            Colors[VertexIndex] = Color;
+            VertexIndex++;
+        }
+        else
+        {
+            f32 RingRatio = ((f32) RingIndex / (f32) (RingCount - 1));
+
+            f32 VerticalAngle = (PI32 / 2.0f - (PI32 * RingRatio));
+            f32 RingRadius = SphereRadius * CosF32(VerticalAngle);
+            f32 Y = SphereRadius * SinF32(VerticalAngle);
+
+            for (u32 SectorIndex = 0; SectorIndex < SectorCount; ++SectorIndex)
+            {
+                f32 SectorRatio = (f32) SectorIndex / (f32) SectorCount;
+                f32 Theta = 2.0f * PI32 * SectorRatio;
+                f32 X = RingRadius * SinF32(Theta);
+                f32 Z = RingRadius * CosF32(Theta);
+
+                vec3 VertPosition = vec3 { X, Y, Z };
+                vec3 SegmentPosition = VertPosition;
+                if (!WorkingOnBottomHalf)
+                {
+                    SegmentPosition += YAlignedTop;
+                }
+                Positions[VertexIndex] = Rotation * SegmentPosition + Base;
+                Normals[VertexIndex] = VecNormalize(VertPosition);
+                Colors[VertexIndex] = Color;
+                VertexIndex++;
+            }
+        }
+        
+        if (!WorkingOnBottomHalf && RingIndex == HalfRingCount - 1)
+        {
+            RingIndex--;
+            WorkingOnBottomHalf = true;
+        }
+    }
+    Assert(VertexIndex == ExpectedVertexCount);
+
+    i32 *Indices = &Prims->Indices[IndicesUsed];
+
+    u32 IndexIndex = 0;
+
+    for (u32 RingIndex = 0; RingIndex < RingCount; ++RingIndex)
+    {
+        for (u32 SectorIndex = 0; SectorIndex < SectorCount; ++SectorIndex)
+        {
+            i32 NextSectorIndex = ((SectorIndex == (SectorCount - 1)) ?
+                                   (0) :
+                                   ((i32) SectorIndex + 1));
+
+            if (RingIndex == 0)
+            {
+                // Sectors are triangles, add 3 indices
+
+                i32 CurrentRingSector0 = 0;
+                i32 NextRingSector0 = 1;
+
+                Indices[IndexIndex++] = CurrentRingSector0 + (i32) VerticesUsed;
+                Indices[IndexIndex++] = NextRingSector0 + (i32) SectorIndex + (i32) VerticesUsed;
+                Indices[IndexIndex++] = NextRingSector0 + NextSectorIndex + (i32) VerticesUsed;
+            }
+            else
+            {
+                i32 CurrentRingSector0 = 1 + ((i32) RingIndex - 1) * (i32) SectorCount;
+                i32 NextRingSector0 = 1 + (i32) RingIndex * (i32) SectorCount;
+
+                if (RingIndex == (RingCount - 1))
+                {
+                    // Sectors are triangles, add 3 indices
+
+                    Indices[IndexIndex++] = CurrentRingSector0 + (i32) SectorIndex + (i32) VerticesUsed;
+                    Indices[IndexIndex++] = NextRingSector0 + (i32) VerticesUsed;
+                    Indices[IndexIndex++] = CurrentRingSector0 + NextSectorIndex + (i32) VerticesUsed;
+                }
+                else
+                {
+                    // Sectors are quads, add 6 indices
+
+                    Indices[IndexIndex++] = CurrentRingSector0 + (i32) SectorIndex + (i32) VerticesUsed;
+                    Indices[IndexIndex++] = NextRingSector0 + (i32) SectorIndex + (i32) VerticesUsed;
+                    Indices[IndexIndex++] = NextRingSector0 + NextSectorIndex + (i32) VerticesUsed;
+
+                    Indices[IndexIndex++] = CurrentRingSector0 + (i32) SectorIndex + (i32) VerticesUsed;
+                    Indices[IndexIndex++] = NextRingSector0 + NextSectorIndex + (i32) VerticesUsed;
+                    Indices[IndexIndex++] = CurrentRingSector0 + NextSectorIndex + (i32) VerticesUsed;
+                }
+            }
+        }
+    }
+    Assert(IndexIndex == ExpectedIndexCount);
+
+    Prims->VerticesUsed += VertexIndex;
+    Prims->IndicesUsed += IndexIndex;
+}
+
+void
 DD_DrawAABox(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 Extents, vec3 Color)
 {
     dd_prims_render_data *Prims = GetRenderDataForPrimStyle(RenderData, Style);
