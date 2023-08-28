@@ -27,11 +27,12 @@ enum test_case
     TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_ITERATIVE,
     TEST_CASE_OBBS_INTERSECTION,
     TEST_CASE_SEGMENT_SEGMENT_CLOSEST_POINT,
-    TEST_CASE_DRAW_CAPSULE,
+    TEST_CASE_SPHERE_CAPSULE,
+    TEST_CASE_CAPSULE_CAPSULE,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_SEGMENT_SEGMENT_CLOSEST_POINT;
+global_variable test_case CurrentTestCase = TEST_CASE_SPHERE_CAPSULE;
 
 void
 ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged);
@@ -579,11 +580,33 @@ main(int Argc, char *Argv[])
                 DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, PointOnA, vec3 { 0.0f, 1.0f, 0.0f });
                 DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, PointOnB, vec3 { 0.0f, 1.0f, 0.0f });
 
-
                 DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, AStart, AEnd, vec3 { 1.0f, 1.0f, 1.0f });
                 DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, BStart, BEnd, vec3 { 1.0f, 1.0f, 1.0f });
             } break;
-            case TEST_CASE_DRAW_CAPSULE:
+            case TEST_CASE_SPHERE_CAPSULE:
+            {
+                sphere Sphere;
+                Sphere.Center = vec3 { 0.0f, 0.0f, 0.0f } + ControlledPosition;
+                Sphere.Radius = 1.0f;
+
+                capsule Capsule;
+                Capsule.Start = vec3 { 5.0f, 0.0f, 0.0f } + ControlledPosition3;
+                Capsule.End = vec3 { 5.0f, 1.0f, 0.0f } + ControlledPosition3 + ControlledPosition4;
+                Capsule.Radius = 0.8f;
+
+                vec3 Color = vec3 { 1.0f, 1.0f, 1.0f };
+
+                if (TestSphereCapsule(Sphere, Capsule, DEBUG_VIZ_NONE))
+                {
+                    Color = vec3 { 0.0f, 1.0f, 0.0f };
+                }
+
+                DD_DrawVector(DDRenderData, VECTOR_STYLE_DEPTHTEST, Capsule.Start, Capsule.End, vec3 { 1.0f, 0.0f, 0.0f });
+
+                DD_DrawSphere(DDRenderData, PRIM_STYLE_TRANSPARENT, Sphere.Center, Sphere.Radius, Color, 29, 30);
+                DD_DrawCapsule(DDRenderData, PRIM_STYLE_TRANSPARENT, Capsule.Start, Capsule.End, Capsule.Radius, Color, 15, 30);
+            } break;
+            case TEST_CASE_CAPSULE_CAPSULE:
             {
                 capsule A;
                 A.Start = vec3 { 0.0f, 0.0f, 0.0f } + ControlledPosition;
@@ -593,13 +616,20 @@ main(int Argc, char *Argv[])
                 capsule B;
                 B.Start = vec3 { 5.0f, 0.0f, 0.0f } + ControlledPosition3;
                 B.End = vec3 { 5.0f, 1.0f, 0.0f } + ControlledPosition3 + ControlledPosition4;
-                B.Radius = 1.5f;
+                B.Radius = 0.8f;
+
+                vec3 Color = vec3 { 1.0f, 1.0f, 1.0f };
+
+                if (TestCapsuleCapsule(A, B, DEBUG_VIZ_NONE))
+                {
+                    Color = vec3 { 0.0f, 1.0f, 0.0f };
+                }
 
                 DD_DrawVector(DDRenderData, VECTOR_STYLE_DEPTHTEST, A.Start, A.End, vec3 { 1.0f, 0.0f, 0.0f });
                 DD_DrawVector(DDRenderData, VECTOR_STYLE_DEPTHTEST, B.Start, B.End, vec3 { 1.0f, 0.0f, 0.0f });
 
-                DD_DrawCapsule(DDRenderData, PRIM_STYLE_TRANSPARENT, A.Start, A.End, A.Radius, vec3 { 1.0f, 1.0f, 1.0f }, 15, 30);
-                DD_DrawCapsule(DDRenderData, PRIM_STYLE_TRANSPARENT, B.Start, B.End, B.Radius, vec3 { 1.0f, 1.0f, 0.0f }, 15, 30);
+                DD_DrawCapsule(DDRenderData, PRIM_STYLE_TRANSPARENT, A.Start, A.End, A.Radius, Color, 15, 30);
+                DD_DrawCapsule(DDRenderData, PRIM_STYLE_TRANSPARENT, B.Start, B.End, B.Radius, Color, 15, 30);
             } break;
             default:
             {

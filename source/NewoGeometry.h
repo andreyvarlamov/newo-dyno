@@ -128,9 +128,9 @@ f32 SegmentSegmentClosestPoint(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
                                f32 *Out_S, f32 *Out_T, vec3 *Out_PointOnA, vec3 *Out_PointOnB);
 
 bool
-TestSphereCapsule(sphere S, capsule C);
+TestSphereCapsule(sphere S, capsule C, debug_viz_data *VizData);
 
 bool
-TestCapsuleCapsule(capsule A, capsule B);
+TestCapsuleCapsule(capsule A, capsule B, debug_viz_data *VizData);
 
 #endif

@@ -962,7 +962,7 @@ f32 SegmentSegmentClosestPoint(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
 //
 
 bool
-TestSphereCapsule(sphere S, capsule C)
+TestSphereCapsule(sphere S, capsule C, debug_viz_data *VizData)
 {
     f32 DistSq = SegmentPointDistSq(C.Start, C.End, S.Center);
     f32 Radius = S.Radius + C.Radius;
@@ -971,7 +971,7 @@ TestSphereCapsule(sphere S, capsule C)
 }
 
 bool
-TestCapsuleCapsule(capsule A, capsule B)
+TestCapsuleCapsule(capsule A, capsule B, debug_viz_data *VizData)
 {
     f32 DistSq = SegmentSegmentClosestPoint(A.Start, A.End, B.Start, B.End, NULL, NULL, NULL, NULL);
     f32 Radius = A.Radius + B.Radius;
