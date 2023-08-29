@@ -856,11 +856,57 @@ TestOBBOBB(obb A, obb B, debug_viz_data *VizData)
 }
 
 //
-// NOTE: SSV (Sphere-swept volumes) Tests
-// -- Internal functions
+// NOTE: SSV (Sphere-swept volumes) Tests - Ericson05 - Ch. 4.5
+// -- External functions
 //
 
-f32 SegmentPointDistSq(vec3 Start, vec3 End, vec3 Point)
+f32
+DistSqSegmentPoint(vec3 Start, vec3 End, vec3 Point);
+f32
+ClosestPointSegmentSegment(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
+                               f32 *Out_S, f32 *Out_T, vec3 *Out_PointOnA, vec3 *Out_PointOnB);
+
+bool
+TestSphereCapsule(sphere S, capsule C, debug_viz_data *VizData)
+{
+    f32 DistSq = DistSqSegmentPoint(C.Start, C.End, S.Center);
+    f32 Radius = S.Radius + C.Radius;
+    bool Result = (DistSq <= Radius * Radius);
+    return Result;
+}
+
+bool
+TestCapsuleCapsule(capsule A, capsule B, debug_viz_data *VizData)
+{
+    f32 DistSq = ClosestPointSegmentSegment(A.Start, A.End, B.Start, B.End, NULL, NULL, NULL, NULL);
+    f32 Radius = A.Radius + B.Radius;
+    bool Result = (DistSq <= Radius * Radius);
+    return Result;
+}
+
+//
+// NOTE: Closest Points - Ericson05 - Ch. 5.1
+//
+
+f32
+DistPointPlane(vec3 Point, plane Plane)
+{
+    // NOTE: This assumes plane normal is normalized
+    //return (VecDot(Plane.Normal, Point) - Plane.Distance) / VecLengthSq(Plane.Normal);
+    return VecDot(Plane.Normal, Point) - Plane.Distance;
+}
+
+vec3
+ClosestPointPlanePoint(vec3 Point, plane Plane)
+{
+    // NOTE: This assumes plane normal is normalized
+    //f32 T = (VecDot(Plane.Normal, Point) - Plane.Distance) / VecLengthSq(Plane.Normal);
+    f32 T = VecDot(Plane.Normal, Point) - Plane.Distance;
+    return Point - T * Plane.Normal;
+}
+
+f32
+DistSqSegmentPoint(vec3 Start, vec3 End, vec3 Point)
 {
     vec3 AB = End - Start;
     vec3 AC = Point - Start;
@@ -874,7 +920,8 @@ f32 SegmentPointDistSq(vec3 Start, vec3 End, vec3 Point)
     return DistSq;
 }
 
-f32 SegmentSegmentClosestPoint(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
+f32
+ClosestPointSegmentSegment(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
                                f32 *Out_S, f32 *Out_T, vec3 *Out_PointOnA, vec3 *Out_PointOnB)
 {
     vec3 ADir = AEnd - AStart;
@@ -954,29 +1001,6 @@ f32 SegmentSegmentClosestPoint(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
     if (Out_PointOnA) *Out_PointOnA = PointOnA;
     if (Out_PointOnB) *Out_PointOnB = PointOnB;
     return VecLengthSq(PointOnA - PointOnB);
-}
-
-//
-// NOTE: SSV (Sphere-swept volumes) Tests
-// -- External functions
-//
-
-bool
-TestSphereCapsule(sphere S, capsule C, debug_viz_data *VizData)
-{
-    f32 DistSq = SegmentPointDistSq(C.Start, C.End, S.Center);
-    f32 Radius = S.Radius + C.Radius;
-    bool Result = (DistSq <= Radius * Radius);
-    return Result;
-}
-
-bool
-TestCapsuleCapsule(capsule A, capsule B, debug_viz_data *VizData)
-{
-    f32 DistSq = SegmentSegmentClosestPoint(A.Start, A.End, B.Start, B.End, NULL, NULL, NULL, NULL);
-    f32 Radius = A.Radius + B.Radius;
-    bool Result = (DistSq <= Radius * Radius);
-    return Result;
 }
 
 #pragma warning(pop)

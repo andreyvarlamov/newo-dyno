@@ -32,7 +32,7 @@ enum test_case
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_SPHERE_CAPSULE;
+global_variable test_case CurrentTestCase = TEST_CASE_CAPSULE_CAPSULE;
 
 void
 ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged);
@@ -574,7 +574,7 @@ main(int Argc, char *Argv[])
 
                 f32 S, T;
                 vec3 PointOnA, PointOnB;
-                f32 DistSq = SegmentSegmentClosestPoint(AStart, AEnd, BStart, BEnd, &S, &T, &PointOnA, &PointOnB);    
+                f32 DistSq = ClosestPointSegmentSegment(AStart, AEnd, BStart, BEnd, &S, &T, &PointOnA, &PointOnB);    
                 printf("DistSq = %.3f; S (on A) = %.3f; T (on B) = %.3f\n", DistSq, S, T);
 
                 DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, PointOnA, vec3 { 0.0f, 1.0f, 0.0f });

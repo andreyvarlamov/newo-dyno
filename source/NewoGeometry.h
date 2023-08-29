@@ -62,6 +62,21 @@ struct lozenge
     f32 Radius;
 };
 
+// NOTE: Kay-Kajiya slab-based volumes. Ericson05 - p.116
+struct slab
+{
+    vec3 Normal;
+    f32 DistNear;
+    f32 DistFar;
+};
+
+// NOTE: Discrete-orientation Polytopes (k-DOPs). Ericson - p.117-122
+struct dop8
+{
+    f32 Min[4];
+    f32 Max[4];
+};
+
 #define DEBUG_VIZ_DOTS 64
 #define DEBUG_VIZ_VECTORS 64
 // Don't know if this is a good idea
@@ -124,7 +139,8 @@ TestOBBOBB(obb A, obb B, debug_viz_data *VizData);
 
 // NOTE: For more info on computing tight OBBs about polyhedra, other references, see Ericson05 p. 108-112
 
-f32 SegmentSegmentClosestPoint(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
+f32
+ClosestPointSegmentSegment(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
                                f32 *Out_S, f32 *Out_T, vec3 *Out_PointOnA, vec3 *Out_PointOnB);
 
 bool
