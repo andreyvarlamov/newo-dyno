@@ -77,6 +77,13 @@ struct dop8
     f32 Max[4];
 };
 
+struct rect
+{
+    vec3 Center;
+    vec3 Axes[2];
+    vec2 Extents;
+};
+
 #define DEBUG_VIZ_DOTS 64
 #define DEBUG_VIZ_VECTORS 64
 // Don't know if this is a good idea

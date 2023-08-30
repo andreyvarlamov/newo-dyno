@@ -861,7 +861,7 @@ TestOBBOBB(obb A, obb B, debug_viz_data *VizData)
 //
 
 f32
-DistSqSegmentPoint(vec3 Start, vec3 End, vec3 Point);
+DistSqPointSegment(vec3 Point, vec3 Start, vec3 End);
 f32
 ClosestPointSegmentSegment(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
                                f32 *Out_S, f32 *Out_T, vec3 *Out_PointOnA, vec3 *Out_PointOnB);
@@ -869,7 +869,7 @@ ClosestPointSegmentSegment(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
 bool
 TestSphereCapsule(sphere S, capsule C, debug_viz_data *VizData)
 {
-    f32 DistSq = DistSqSegmentPoint(C.Start, C.End, S.Center);
+    f32 DistSq = DistSqPointSegment(S.Center, C.Start, C.End);
     f32 Radius = S.Radius + C.Radius;
     bool Result = (DistSq <= Radius * Radius);
     return Result;
@@ -888,17 +888,10 @@ TestCapsuleCapsule(capsule A, capsule B, debug_viz_data *VizData)
 // NOTE: Closest Points - Ericson05 - Ch. 5.1
 //
 
-f32
-DistPointPlane(vec3 Point, plane Plane)
-{
-    // NOTE: This assumes plane normal is normalized
-    //return (VecDot(Plane.Normal, Point) - Plane.Distance) / VecLengthSq(Plane.Normal);
-    return VecDot(Plane.Normal, Point) - Plane.Distance;
-}
-
 vec3
-ClosestPointPlanePoint(vec3 Point, plane Plane)
+ClosestPointPointPlane(vec3 Point, plane Plane)
 {
+    // NOTE: Ericson05 - 5.1.1
     // NOTE: This assumes plane normal is normalized
     //f32 T = (VecDot(Plane.Normal, Point) - Plane.Distance) / VecLengthSq(Plane.Normal);
     f32 T = VecDot(Plane.Normal, Point) - Plane.Distance;
@@ -906,8 +899,50 @@ ClosestPointPlanePoint(vec3 Point, plane Plane)
 }
 
 f32
-DistSqSegmentPoint(vec3 Start, vec3 End, vec3 Point)
+DistPointPlane(vec3 Point, plane Plane)
 {
+    // NOTE: Ericson05 - 5.1.1
+    // NOTE: This assumes plane normal is normalized
+    //return (VecDot(Plane.Normal, Point) - Plane.Distance) / VecLengthSq(Plane.Normal);
+    return VecDot(Plane.Normal, Point) - Plane.Distance;
+}
+
+vec3
+ClosestPointPointSegment(vec3 Point, vec3 Start, vec3 End, f32 *Out_T)
+{
+    // NOTE: Ericson05 - 5.1.2. Optimized version that defers devision
+    vec3 AB = End - Start;
+    f32 T = VecDot(Point - Start, AB);
+    vec3 ClosestPoint;
+    if (T <= 0.0f)
+    {
+        T = 0.0f;
+        ClosestPoint = Start;
+    }
+    else
+    {
+        f32 Denom = VecLengthSq(AB);
+        if (T >= Denom)
+        {
+            T = 1.0f;
+            ClosestPoint = End;
+        }
+        else
+        {
+            T = T / Denom;
+            ClosestPoint = Start + T * AB;
+        }
+    }
+
+    if (Out_T) *Out_T = T;
+    return ClosestPoint;
+}
+
+f32
+DistSqPointSegment(vec3 Point, vec3 Start, vec3 End)
+{
+    // NOTE: Ericson05 - 5.1.2.1.
+    // NOTE: This is more efficient than calculating the closest point itself
     vec3 AB = End - Start;
     vec3 AC = Point - Start;
     vec3 BC = Point - End;
@@ -918,6 +953,256 @@ DistSqSegmentPoint(vec3 Start, vec3 End, vec3 Point)
     if (Proj >= SegmentLengthSq) return VecLengthSq(BC);
     f32 DistSq = VecLengthSq(AC) - Proj * Proj / SegmentLengthSq;
     return DistSq;
+}
+
+vec3
+ClosestPointPointAABB(vec3 Point, aabb AABB)
+{
+    // NOTE: Ericson05 - 5.1.3.
+    vec3 ClosestPoint;
+
+    for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+    {
+        f32 AABBMin = AABB.Center.D[AxisIndex] - AABB.Extents.D[AxisIndex];
+        f32 AABBMax = AABB.Center.D[AxisIndex] + AABB.Extents.D[AxisIndex];
+        
+        f32 PointValue = Point.D[AxisIndex];
+        if (PointValue < AABBMin)
+        {
+            PointValue = AABBMin;
+        }
+        else if (PointValue > AABBMax)
+        {
+            PointValue = AABBMax;
+        }
+        ClosestPoint.D[AxisIndex] = PointValue;
+    }
+
+    return ClosestPoint;
+}
+
+f32 DistSqPointAABB(vec3 Point, aabb AABB)
+{
+    // NOTE: Ericson05 - 5.1.3.1.
+    f32 DistSq = 0.0f;
+
+    for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+    {
+        // NOTE: For each axis count any excess distance outside box extents
+        f32 AABBMin = AABB.Center.D[AxisIndex] - AABB.Extents.D[AxisIndex];
+        f32 AABBMax = AABB.Center.D[AxisIndex] + AABB.Extents.D[AxisIndex];
+
+        f32 PointValue = Point.D[AxisIndex];
+        if (PointValue < AABBMin)
+        {
+            DistSq += (AABBMin - PointValue) * (AABBMin - PointValue);
+        }
+        else if (PointValue > AABBMax)
+        {
+            DistSq += (PointValue - AABBMax) * (PointValue - AABBMax);
+        }
+    }
+
+    return DistSq;
+}
+
+vec3
+ClosestPointPointOBB(vec3 Point, obb OBB)
+{
+    // NOTE: Ericson05 - 5.1.4
+    vec3 ClosestPoint;
+
+    vec3 D = Point - OBB.Center;
+
+    ClosestPoint = OBB.Center;
+
+    for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+    {
+        f32 Dist = VecDot(D, OBB.Axes[AxisIndex]);
+
+        if (Dist > OBB.Extents.D[AxisIndex])
+        {
+            Dist = OBB.Extents.D[AxisIndex];
+        }
+        else if (Dist < -OBB.Extents.D[AxisIndex])
+        {
+            Dist = -OBB.Extents.D[AxisIndex];
+        }
+
+        // Step that distance along the OBB axis to get world coordinate
+        ClosestPoint += Dist * OBB.Axes[AxisIndex];
+    }
+
+    return ClosestPoint;
+}
+
+f32
+DistSqPointOBB(vec3 Point, obb OBB)
+{
+    // NOTE: Ericson05 - 5.1.4.1
+    f32 DistSq;
+
+    vec3 D = Point - OBB.Center;
+
+    DistSq = 0.0f;
+    
+    for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+    {
+        f32 Dist = VecDot(D, OBB.Axes[AxisIndex]);
+        f32 Excess = 0.0f;
+        if (Dist > OBB.Extents.D[AxisIndex])
+        {
+            Excess = Dist - OBB.Extents.D[AxisIndex];
+        }
+        else if (Dist < -OBB.Extents.D[AxisIndex])
+        {
+            Excess = Dist + OBB.Extents.D[AxisIndex];
+        }
+
+        DistSq += Excess * Excess;
+    }
+
+    return DistSq;
+}
+
+vec3
+ClosestPointPointRect(vec3 Point, rect Rect)
+{
+    // NOTE: Ericson05 - 5.1.4.2
+    vec3 ClosestPoint;
+
+    vec3 D = Point - Rect.Center;
+
+    ClosestPoint = Rect.Center;
+
+    for (u32 AxisIndex = 0; AxisIndex < 2; ++AxisIndex)
+    {
+        f32 Dist = VecDot(D, Rect.Axes[AxisIndex]);
+        if (Dist > Rect.Extents.D[AxisIndex])
+        {
+            Dist = Rect.Extents.D[AxisIndex];
+        }
+        else if (Dist < -Rect.Extents.D[AxisIndex])
+        {
+            Dist = -Rect.Extents.D[AxisIndex];
+        }
+
+        // Step that distance along the rectangle axis to get world coordinate
+        ClosestPoint += Dist * Rect.Axes[AxisIndex];
+    }
+
+    return ClosestPoint;
+}
+
+vec3
+ClosestPointPointRect(vec3 Point, vec3 A, vec3 B, vec3 C)
+{
+    // NOTE: Ericson05 - 5.1.4.2
+    vec3 ClosestPoint;
+
+    vec3 AB = B - A;
+    vec3 AC = C - A;
+    vec3 D = Point - A;
+
+    // Start at top-left corner of rect
+    ClosestPoint  = A;
+
+    f32 Dist = VecDot(D, AB);
+    f32 MaxDist = VecLengthSq(AB);
+    if (Dist >= MaxDist)
+    {
+        ClosestPoint += AB;
+    }
+    else if (Dist > 0.0f)
+    {
+        ClosestPoint += (Dist / MaxDist) * AB;
+    }
+    
+    Dist = VecDot(D, AC);
+    MaxDist = VecLengthSq(AC);
+    if (Dist >= MaxDist)
+    {
+        ClosestPoint += AC;
+    }
+    else if (Dist > 0.0f)
+    {
+        ClosestPoint += (Dist / MaxDist) * AC;
+    }
+
+    return ClosestPoint;
+}
+
+vec3
+ClosestPointPointTriangle(vec3 Point, vec3 A, vec3 B, vec3 C)
+{
+    // NOTE: Ericson05 - 5.1.5
+
+    // NOTE: This is using barycentric coordinates/voronoi regions of triangle ABC,
+    // but with simplified math, and more efficient using dot products, instead
+    // of cross products. For detailed derivation see Ericson.
+
+    vec3 ClosestPoint;
+    
+    // Check if P is in vertex region outside A
+    vec3 AB = B - A;
+    vec3 AC = C - A;
+    vec3 AP = Point - A;
+    f32 Dot1 = VecDot(AB, AP);
+    f32 Dot2 = VecDot(AC, AP);
+    if (Dot1 <= 0.0f && Dot2 <= 0.0f) 
+    {
+        ClosestPoint = A; // Barycentric coordinates (1, 0, 0)
+    }
+
+    // Check if P is in vertex region outside B
+    vec3 BP = Point - B;
+    f32 Dot3 = VecDot(AB, BP);
+    f32 Dot4 = VecDot(AC, BP);
+    if (Dot3 >= 0.0f && Dot4 <= Dot3)
+    {
+        ClosestPoint = B; // Barycentric coordinates (0, 1, 0)
+    }
+
+    // Check if P is in edge region of AB, if so return projection of P onto AB
+    f32 VC = Dot1 * Dot4 - Dot3 * Dot2;
+    if (VC <= 0.0f && Dot1 >= 0.0f && Dot3 <= 0.0f)
+    {
+        f32 V = Dot1 / (Dot1 - Dot3);
+        ClosestPoint = A + V * AB; // Barycentric coordinates (1-v, v, 0)
+    }
+
+    // Check if P is in vertex region outside C
+    vec3 CP = Point - C;
+    f32 Dot5 = VecDot(AB, CP);
+    f32 Dot6 = VecDot(AC, CP);
+    if (Dot6 >= 0.0f && Dot5 <= Dot6)
+    {
+        ClosestPoint = C; // Barycentric coordinates (0, 0, 1)
+    }
+
+    // Check if P is in edge region of AC, if so return projection of P onto AC
+    f32 VB = Dot5 * Dot2 - Dot1 * Dot6;
+    if (VB <= 0.0f && Dot2 >= 0.0f && Dot6 <= 0.0f)
+    {
+        f32 W = Dot2 / (Dot2 - Dot6);
+        ClosestPoint = A + W * AC; // Barycentric coordinates (1-w, 0, w)
+    }
+
+    // Check if P is in edge region of BC, if so return projection of P onto BC
+    f32 VA = Dot3 * Dot6 - Dot5 * Dot4;
+    if (VA <= 0.0f && (Dot4 - Dot3) >= 0.0f && (Dot5 - Dot6) >= 0.0f)
+    {
+        f32 W = (Dot4 - Dot3) / ((Dot4 - Dot3) + (Dot5 - Dot6));
+        ClosestPoint = B + W * (C - B); // Barycentric coordinates (0, 1-w, w)
+    }
+
+    // P inside face region. Compute Q through its barycentric coordinates (u, v, w)
+    f32 Denom = 1.0f / (VA + VB + VC);
+    f32 V = VB * Denom;
+    f32 W = VC * Denom;
+    ClosestPoint = A + AB * V + AC * W;
+
+    return ClosestPoint;
 }
 
 f32
