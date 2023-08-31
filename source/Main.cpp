@@ -28,11 +28,15 @@ enum test_case
     TEST_CASE_OBBS_INTERSECTION,
     TEST_CASE_SPHERE_CAPSULE,
     TEST_CASE_CAPSULE_CAPSULE,
-    TEST_CASE_SEGMENT_SEGMENT_CLOSEST_POINT,
+    TEST_CASE_CLOSEST_POINT_POINT_SEGMENT,
+    TEST_CASE_CLOSEST_POINT_POINT_AABB,
+    TEST_CASE_CLOSEST_POINT_POINT_OBB,
+    TEST_CASE_CLOSEST_POINT_POINT_RECT,
+    TEST_CASE_CLOSEST_POINT_SEGMENT_SEGMENT,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_SEGMENT_SEGMENT_CLOSEST_POINT;
+global_variable test_case CurrentTestCase = TEST_CASE_CLOSEST_POINT_POINT_RECT;
 
 void
 ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged);
@@ -119,7 +123,7 @@ main(int Argc, char *Argv[])
 
     //srand((u32) time(0));
     srand(123);
-    
+
     //DUI_LoadFontFromFile("resource/font/FragmentMono-Italic.ttf", 18);
     //DUI_LoadFontFromFile("resource/font/PoltawskiNowy-Italic.ttf", 18);
 
@@ -613,7 +617,89 @@ main(int Argc, char *Argv[])
                 DD_DrawCapsule(DDRenderData, PRIM_STYLE_TRANSPARENT, A.Start, A.End, A.Radius, Color, 15, 30);
                 DD_DrawCapsule(DDRenderData, PRIM_STYLE_TRANSPARENT, B.Start, B.End, B.Radius, Color, 15, 30);
             } break;
-            case TEST_CASE_SEGMENT_SEGMENT_CLOSEST_POINT:
+            case TEST_CASE_CLOSEST_POINT_POINT_SEGMENT:
+            {
+                vec3 Point = vec3 { -1.0f, 0.0f, 0.0f } + vec3 { ControlledPosition.X, -ControlledPosition.Z, 0.0f };
+                vec3 Start = vec3 { 1.0f, 0.0f, 0.0f };
+                vec3 End = vec3 { 1.0f, 1.0f, 0.0f };
+                f32 T;
+                vec3 ClosestPoint = ClosestPointPointSegment(Point, Start, End, &T);
+                f32 DistSq = DistSqPointSegment(Point, Start, End);
+                printf("T = %.3f; DistSq = %.3f\n", T, DistSq);
+
+                DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, Start, End, vec3 { 1.0f, 1.0f, 1.0f });
+
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, Point, vec3 { 1.0f, 1.0f, 1.0f });
+                
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, ClosestPoint, vec3 { 0.0f, 1.0f, 0.0f });
+            } break;
+            case TEST_CASE_CLOSEST_POINT_POINT_AABB:
+            {
+                vec3 Point = vec3 { -1.0f, 0.0f, 0.0f } + ControlledPosition;
+                aabb AABB;
+                AABB.Center = vec3 { 1.0f, 0.0f, 0.0f };
+                AABB.Extents = vec3 { 1.0f, 1.0f, 1.0f };
+                
+                vec3 ClosestPoint = ClosestPointPointAABB(Point, AABB);
+                f32 DistSq = DistSqPointAABB(Point, AABB);
+                printf("DistSq = %.3f\n", DistSq);
+
+                DD_DrawAABox(DDRenderData, PRIM_STYLE_TRANSPARENT, AABB.Center, AABB.Extents, vec3 { 1.0f, 1.0f, 1.0f });
+
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, Point, vec3 { 1.0f, 1.0f, 1.0f });
+                
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, ClosestPoint, vec3 { 0.0f, 1.0f, 0.0f });
+            } break;
+            case TEST_CASE_CLOSEST_POINT_POINT_OBB:
+            {
+                vec3 Point = vec3 { -1.0f, 0.0f, 0.0f } + ControlledPosition;
+                obb OBB;
+                OBB.Center = vec3 { 1.0f, 0.0f, 0.0f };
+                mat3 Rotation = Mat3GetRotationAroundAxis(VecNormalize(vec3 { 1.0f, 1.0f, 1.0f}), DegreesToRadians(45.0f));
+                Mat3GetCols(Rotation, OBB.Axes);
+                OBB.Extents = vec3 { 1.0f, 1.0f, 1.0f };
+                
+                vec3 ClosestPoint = ClosestPointPointOBB(Point, OBB);
+                f32 DistSq = DistSqPointOBB(Point, OBB);
+                printf("DistSq = %.3f\n", DistSq);
+
+                DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_TRANSPARENT, OBB.Center, OBB.Extents, Rotation, vec3 { 1.0f, 1.0f, 1.0f });
+
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, Point, vec3 { 1.0f, 1.0f, 1.0f });
+                
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, ClosestPoint, vec3 { 0.0f, 1.0f, 0.0f });
+            } break;
+            case TEST_CASE_CLOSEST_POINT_POINT_RECT:
+            {
+                glDisable(GL_CULL_FACE);
+
+                vec3 Point = vec3 { -1.0f, 0.0f, 0.0f } + ControlledPosition;
+
+                rect Rect;
+                Rect.Center = vec3 { 2.0f, 1.0f, 0.0f };
+                vec3 OrientationAxisPoint = vec3 { 0.0f, 1.0f, 0.0f } + ControlledPosition2;
+                mat3 Rotation = Mat3GetRotationAroundAxis(VecNormalize(OrientationAxisPoint), DegreesToRadians(ControlledAngle2));
+                Rect.Axes[0] = Mat3GetCol(Rotation, 0);
+                Rect.Axes[1] = Mat3GetCol(Rotation, 1);
+                Rect.Extents = vec2 { 1.0f, 0.5f };
+
+                vec3 ClosestPoint = ClosestPointPointRect(Point, Rect);
+                vec3 ClosestPoint2 = ClosestPointPointRect(Point,
+                                                           Rect.Center - Rect.Extents.X * Rect.Axes[0] + Rect.Extents.Y * Rect.Axes[0],
+                                                           Rect.Center - Rect.Extents.X * Rect.Axes[0] - Rect.Extents.Y * Rect.Axes[0],
+                                                           Rect.Center + Rect.Extents.X * Rect.Axes[0] + Rect.Extents.Y * Rect.Axes[0]);
+
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, ClosestPoint, vec3 { 0.0f, 1.0f, 0.0f });
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, ClosestPoint2, vec3 { 1.0f, 0.0f, 0.0f });
+
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, Rect.Center, vec3 { 0.9f, 0.9f, 0.9f });
+                DD_DrawRect(DDRenderData, PRIM_STYLE_TRANSPARENT, Rect.Center, Rect.Axes, Rect.Extents, vec3 { 1.0f, 1.0f, 1.0f });
+
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, Point, vec3 { 1.0f, 1.0f, 1.0f });
+
+                DD_VisualizeRotationMat(DDRenderData, VECTOR_STYLE_OVERLAY, Rotation, 2.0f, Rect.Center, vec3 { 0.5f, 0.5f, 0.5f });
+            } break;
+            case TEST_CASE_CLOSEST_POINT_SEGMENT_SEGMENT:
             {
                 vec3 AStart = vec3 { -1.0f, 0.0f, 0.0f } + vec3 { ControlledPosition.X, -ControlledPosition.Z, 0.0f };
                 vec3 AEnd = vec3 { -1.0f, 1.0f, 0.0f } + vec3 { ControlledPosition2.X, -ControlledPosition2.Z, 0.0f };

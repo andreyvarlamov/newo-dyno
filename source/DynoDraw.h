@@ -93,6 +93,9 @@ void
 DD_DrawOrientedBox(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 Extents, mat3 Orientation, vec3 Color);
 
 void
+DD_DrawRect(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 *Axes, vec2 Extents, vec3 Color);
+
+void
 DD_DrawDot(dd_render_data *RenderData, vector_style Style, vec3 Position, vec3 Color);
 
 void

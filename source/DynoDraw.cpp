@@ -449,6 +449,44 @@ DD_DrawOrientedBox(dd_render_data *RenderData, prim_style Style, vec3 Position, 
 }
 
 void
+DD_DrawRect(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 *Axes, vec2 Extents, vec3 Color)
+{
+    dd_prims_render_data *Prims = GetRenderDataForPrimStyle(RenderData, Style);
+
+    u32 VerticesUsed = Prims->VerticesUsed;
+    u32 IndicesUsed = Prims->IndicesUsed;
+    Assert(VerticesUsed + 4 <= MAX_VERTEX_COUNT);
+    Assert(IndicesUsed + 6 <= MAX_INDEX_COUNT);
+
+    vec3 *Positions = &Prims->Positions[VerticesUsed];
+    vec3 *Normals = &Prims->Normals[VerticesUsed];
+    vec3 *Colors = &Prims->Colors[VerticesUsed];
+
+    Positions[0] = Position - Extents.X * Axes[0] + Extents.Y * Axes[1];
+    Positions[1] = Position - Extents.X * Axes[0] - Extents.Y * Axes[1];
+    Positions[2] = Position + Extents.X * Axes[0] - Extents.Y * Axes[1];
+    Positions[3] = Position + Extents.X * Axes[0] + Extents.Y * Axes[1];
+    
+    Normals[0] = Normals[1] = Normals[2] = Normals[3] = VecNormalize(VecCross(Axes[0], Axes[1]));
+
+    Colors[0] = Colors[1] = Colors[2] = Colors[3] = Color;
+
+    i32 *Indices = &Prims->Indices[IndicesUsed];
+
+    i32 IndicesToCopy[] = {
+        0, 1, 3,  3, 1, 2
+    };
+
+    for (u32 IndexIndex = 0; IndexIndex < ArrayCount(IndicesToCopy); ++IndexIndex)
+    {
+        Indices[IndexIndex] = IndicesToCopy[IndexIndex] + VerticesUsed;
+    }
+
+    Prims->VerticesUsed += 4;
+    Prims->IndicesUsed += 6;
+}
+
+void
 DD_DrawDot(dd_render_data *RenderData, vector_style Style, vec3 Position, vec3 Color)
 {
     dd_dots_render_data *Dots;

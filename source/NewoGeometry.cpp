@@ -981,7 +981,8 @@ ClosestPointPointAABB(vec3 Point, aabb AABB)
     return ClosestPoint;
 }
 
-f32 DistSqPointAABB(vec3 Point, aabb AABB)
+f32
+DistSqPointAABB(vec3 Point, aabb AABB)
 {
     // NOTE: Ericson05 - 5.1.3.1.
     f32 DistSq = 0.0f;
