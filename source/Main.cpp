@@ -32,11 +32,13 @@ enum test_case
     TEST_CASE_CLOSEST_POINT_POINT_AABB,
     TEST_CASE_CLOSEST_POINT_POINT_OBB,
     TEST_CASE_CLOSEST_POINT_POINT_RECT,
+    TEST_CASE_CLOSEST_POINT_POINT_TRIANGLE,
+    TEST_CASE_CLOSEST_POINT_POINT_TETRAHEDRON,
     TEST_CASE_CLOSEST_POINT_SEGMENT_SEGMENT,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_CLOSEST_POINT_POINT_RECT;
+global_variable test_case CurrentTestCase = TEST_CASE_CLOSEST_POINT_SEGMENT_SEGMENT;
 
 void
 ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged);
@@ -685,9 +687,9 @@ main(int Argc, char *Argv[])
 
                 vec3 ClosestPoint = ClosestPointPointRect(Point, Rect);
                 vec3 ClosestPoint2 = ClosestPointPointRect(Point,
-                                                           Rect.Center - Rect.Extents.X * Rect.Axes[0] + Rect.Extents.Y * Rect.Axes[0],
-                                                           Rect.Center - Rect.Extents.X * Rect.Axes[0] - Rect.Extents.Y * Rect.Axes[0],
-                                                           Rect.Center + Rect.Extents.X * Rect.Axes[0] + Rect.Extents.Y * Rect.Axes[0]);
+                                                           Rect.Center - Rect.Extents.X * Rect.Axes[0] + Rect.Extents.Y * Rect.Axes[1],
+                                                           Rect.Center - Rect.Extents.X * Rect.Axes[0] - Rect.Extents.Y * Rect.Axes[1],
+                                                           Rect.Center + Rect.Extents.X * Rect.Axes[0] + Rect.Extents.Y * Rect.Axes[1]);
 
                 DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, ClosestPoint, vec3 { 0.0f, 1.0f, 0.0f });
                 DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, ClosestPoint2, vec3 { 1.0f, 0.0f, 0.0f });
@@ -699,12 +701,66 @@ main(int Argc, char *Argv[])
 
                 DD_VisualizeRotationMat(DDRenderData, VECTOR_STYLE_OVERLAY, Rotation, 2.0f, Rect.Center, vec3 { 0.5f, 0.5f, 0.5f });
             } break;
+            case TEST_CASE_CLOSEST_POINT_POINT_TRIANGLE:
+            {
+                glDisable(GL_CULL_FACE);
+
+                vec3 Point = vec3 { -1.0f, 1.0f, 0.0f } + ControlledPosition;
+
+                vec3 A = vec3 { 1.5f, 1.0f, 0.0f } + ControlledPosition2;
+                vec3 B = vec3 { 2.5f, 1.0f, 0.0f } + ControlledPosition3;
+                vec3 C = vec3 { 2.0f, 2.0f, 0.0f } + ControlledPosition4;
+
+                vec3 Centroid = (A + B + C) / 3.0f;
+                vec3 Normal = VecNormalize(VecCross(B - A, C - A));
+
+                vec3 ClosestPoint = ClosestPointPointTriangle(Point, A, B, C);
+
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, Point, vec3 { 1.0f, 1.0f, 1.0f });
+
+                DD_DrawTriangle(DDRenderData, PRIM_STYLE_TRANSPARENT, A, B, C, vec3 { 1.0f, 1.0f, 1.0f });
+                DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, Centroid, Centroid + 2.0f * Normal, vec3 { 0.0f, 0.0f, 1.0f });
+                if ((CurrentKeyStates[SDL_SCANCODE_LSHIFT] || CurrentKeyStates[SDL_SCANCODE_RSHIFT]) &&
+                    (CurrentKeyStates[SDL_SCANCODE_LALT] || CurrentKeyStates[SDL_SCANCODE_RALT]))
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, C, vec3 { 1.0f, 0.0f, 1.0f });
+                }
+                else if (CurrentKeyStates[SDL_SCANCODE_LSHIFT] || CurrentKeyStates[SDL_SCANCODE_RSHIFT])
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, A, vec3 { 1.0f, 0.0f, 1.0f });
+                }
+                else if (CurrentKeyStates[SDL_SCANCODE_LALT] || CurrentKeyStates[SDL_SCANCODE_RALT])
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, B, vec3 { 1.0f, 0.0f, 1.0f });
+                }
+
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, ClosestPoint, vec3 { 0.0f, 1.0f, 0.0f });
+            } break;
+            case TEST_CASE_CLOSEST_POINT_POINT_TETRAHEDRON:
+            {
+                glDisable(GL_CULL_FACE);
+
+                vec3 Point = vec3 { -1.0f, 1.0f, 0.0f } + ControlledPosition;
+
+                vec3 A = vec3 { 2.0f, 2.0f, 0.0f };
+                vec3 B = vec3 { 1.5f, 1.0f, 0.5f };
+                vec3 C = vec3 { 2.5f, 1.0f, 0.5f };
+                vec3 D = vec3 { 2.0f, 1.0f, -0.5f };
+
+                vec3 ClosestPoint = ClosestPointPointTetrahedron(Point, A, B, C, D);
+
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, Point, vec3 { 1.0f, 1.0f, 1.0f });
+
+                DD_DrawTetrahedron(DDRenderData, PRIM_STYLE_WIREFRAME, A, B, C, D, vec3 { 1.0f, 1.0f, 1.0f });
+
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, ClosestPoint, vec3 { 0.0f, 1.0f, 0.0f });
+            } break;
             case TEST_CASE_CLOSEST_POINT_SEGMENT_SEGMENT:
             {
-                vec3 AStart = vec3 { -1.0f, 0.0f, 0.0f } + vec3 { ControlledPosition.X, -ControlledPosition.Z, 0.0f };
-                vec3 AEnd = vec3 { -1.0f, 1.0f, 0.0f } + vec3 { ControlledPosition2.X, -ControlledPosition2.Z, 0.0f };
-                vec3 BStart = vec3 { 1.0f, 0.0f, 0.0f } + vec3 { ControlledPosition3.X, -ControlledPosition3.Z, 0.0f };
-                vec3 BEnd = vec3 { 1.0f, 1.0f, 0.0f } + vec3 { ControlledPosition4.X, -ControlledPosition4.Z, 0.0f };
+                vec3 AStart = vec3 { -1.0f, 0.0f, 0.0f } + ControlledPosition;
+                vec3 AEnd = vec3 { -1.0f, 1.0f, 0.0f } + ControlledPosition2;
+                vec3 BStart = vec3 { 1.0f, 0.0f, 0.0f } + ControlledPosition3;
+                vec3 BEnd = vec3 { 1.0f, 1.0f, 0.0f } + ControlledPosition4;
 
                 f32 S, T;
                 vec3 PointOnA, PointOnB;

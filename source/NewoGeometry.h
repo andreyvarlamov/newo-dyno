@@ -180,4 +180,10 @@ ClosestPointPointRect(vec3 Point, rect Rect);
 vec3
 ClosestPointPointRect(vec3 Point, vec3 A, vec3 B, vec3 C);
 
+vec3
+ClosestPointPointTriangle(vec3 Point, vec3 A, vec3 B, vec3 C);
+
+vec3
+ClosestPointPointTetrahedron(vec3 Point, vec3 A, vec3 B, vec3 C, vec3 D);
+
 #endif

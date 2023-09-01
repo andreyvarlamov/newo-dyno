@@ -487,6 +487,92 @@ DD_DrawRect(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 *A
 }
 
 void
+DD_DrawTriangle(dd_render_data *RenderData, prim_style Style, vec3 A, vec3 B, vec3 C, vec3 Color)
+{
+    dd_prims_render_data *Prims = GetRenderDataForPrimStyle(RenderData, Style);
+
+    u32 VerticesUsed = Prims->VerticesUsed;
+    u32 IndicesUsed = Prims->IndicesUsed;
+    Assert(VerticesUsed + 3 <= MAX_VERTEX_COUNT);
+    Assert(IndicesUsed + 3 <= MAX_INDEX_COUNT);
+
+    vec3 *Positions = &Prims->Positions[VerticesUsed];
+    vec3 *Normals = &Prims->Normals[VerticesUsed];
+    vec3 *Colors = &Prims->Colors[VerticesUsed];
+
+    Positions[0] = A;
+    Positions[1] = B;
+    Positions[2] = C;
+    
+    Normals[0] = Normals[1] = Normals[2] = VecNormalize(VecCross(B - A, C - A));
+
+    Colors[0] = Colors[1] = Colors[2] = Color;
+
+    i32 *Indices = &Prims->Indices[IndicesUsed];
+
+    i32 IndicesToCopy[] = {
+        0, 1, 2
+    };
+
+    for (u32 IndexIndex = 0; IndexIndex < ArrayCount(IndicesToCopy); ++IndexIndex)
+    {
+        Indices[IndexIndex] = IndicesToCopy[IndexIndex] + VerticesUsed;
+    }
+
+    Prims->VerticesUsed += 3;
+    Prims->IndicesUsed += 3;
+}
+
+void
+DD_DrawTetrahedron(dd_render_data *RenderData, prim_style Style, vec3 A, vec3 B, vec3 C, vec3 D, vec3 Color)
+{
+    dd_prims_render_data *Prims = GetRenderDataForPrimStyle(RenderData, Style);
+
+    u32 VerticesUsed = Prims->VerticesUsed;
+    u32 IndicesUsed = Prims->IndicesUsed;
+    Assert(VerticesUsed + 4 <= MAX_VERTEX_COUNT);
+    Assert(IndicesUsed + 12 <= MAX_INDEX_COUNT);
+
+    vec3 *Positions = &Prims->Positions[VerticesUsed];
+    vec3 *Normals = &Prims->Normals[VerticesUsed];
+    vec3 *Colors = &Prims->Colors[VerticesUsed];
+
+    Positions[0] = A;
+    Positions[1] = B;
+    Positions[2] = C;
+    Positions[3] = D;
+
+    vec3 NormalABC = VecNormalize(VecCross(B - A, C - A));
+    vec3 NormalACD = VecNormalize(VecCross(C - A, D - A));
+    vec3 NormalADB = VecNormalize(VecCross(D - A, B - A));
+    vec3 NormalBDC = VecNormalize(VecCross(D - B, C - B));
+    
+    Normals[0] = (NormalABC + NormalACD + NormalADB) / 3.0f;
+    Normals[1] = (NormalABC + NormalADB + NormalBDC) / 3.0f;
+    Normals[2] = (NormalABC + NormalACD + NormalBDC) / 3.0f;
+    Normals[3] = (NormalACD + NormalADB + NormalBDC) / 3.0f;
+
+    Colors[0] = Colors[1] = Colors[2] = Colors[3] = Color;
+
+    i32 *Indices = &Prims->Indices[IndicesUsed];
+
+    i32 IndicesToCopy[] = {
+        0, 1, 2, // ABC
+        0, 2, 3, // ACD
+        0, 3, 1, // ADB
+        1, 3, 2  // BDC
+    };
+
+    for (u32 IndexIndex = 0; IndexIndex < ArrayCount(IndicesToCopy); ++IndexIndex)
+    {
+        Indices[IndexIndex] = IndicesToCopy[IndexIndex] + VerticesUsed;
+    }
+
+    Prims->VerticesUsed += 4;
+    Prims->IndicesUsed += 12;
+}
+
+void
 DD_DrawDot(dd_render_data *RenderData, vector_style Style, vec3 Position, vec3 Color)
 {
     dd_dots_render_data *Dots;

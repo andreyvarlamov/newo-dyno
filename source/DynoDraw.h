@@ -96,6 +96,12 @@ void
 DD_DrawRect(dd_render_data *RenderData, prim_style Style, vec3 Position, vec3 *Axes, vec2 Extents, vec3 Color);
 
 void
+DD_DrawTriangle(dd_render_data *RenderData, prim_style Style, vec3 A, vec3 B, vec3 C, vec3 Color);
+
+void
+DD_DrawTetrahedron(dd_render_data *RenderData, prim_style Style, vec3 A, vec3 B, vec3 C, vec3 D, vec3 Color);
+
+void
 DD_DrawDot(dd_render_data *RenderData, vector_style Style, vec3 Position, vec3 Color);
 
 void

@@ -52,9 +52,10 @@ TriDoubleSignedArea(vec3 A, vec3 B, vec3 C)
 }
 
 internal f32
-TriDoubleArea2D(f32 X1, f32 Y1, f32 X2, f32 Y2, f32 X3, f32 Y3)
+TriDoubleSignedArea2D(vec2 A, vec2 B, vec2 C)
 {
-    return (X1 - X2) * (Y2 - Y3) - (X2 - X3) * (Y1 - Y2);
+    // NOTE: Modified in 5.1.9.1
+    return (A.X - C.X) * (B.Y - C.Y) - (A.Y - C.Y) * (B.X - C.X);
 }
 
 internal void
@@ -1142,8 +1143,10 @@ ClosestPointPointTriangle(vec3 Point, vec3 A, vec3 B, vec3 C)
     // but with simplified math, and more efficient using dot products, instead
     // of cross products. For detailed derivation see Ericson.
 
-    vec3 ClosestPoint;
-    
+    vec3 ClosestPoint = {};
+
+    bool FoundPoint = false; // NOTE: This is kinda inefficient, but better for debugging
+
     // Check if P is in vertex region outside A
     vec3 AB = B - A;
     vec3 AC = C - A;
@@ -1153,6 +1156,7 @@ ClosestPointPointTriangle(vec3 Point, vec3 A, vec3 B, vec3 C)
     if (Dot1 <= 0.0f && Dot2 <= 0.0f) 
     {
         ClosestPoint = A; // Barycentric coordinates (1, 0, 0)
+        FoundPoint = true;
     }
 
     // Check if P is in vertex region outside B
@@ -1162,6 +1166,7 @@ ClosestPointPointTriangle(vec3 Point, vec3 A, vec3 B, vec3 C)
     if (Dot3 >= 0.0f && Dot4 <= Dot3)
     {
         ClosestPoint = B; // Barycentric coordinates (0, 1, 0)
+        FoundPoint = true;
     }
 
     // Check if P is in edge region of AB, if so return projection of P onto AB
@@ -1170,6 +1175,7 @@ ClosestPointPointTriangle(vec3 Point, vec3 A, vec3 B, vec3 C)
     {
         f32 V = Dot1 / (Dot1 - Dot3);
         ClosestPoint = A + V * AB; // Barycentric coordinates (1-v, v, 0)
+        FoundPoint = true;
     }
 
     // Check if P is in vertex region outside C
@@ -1179,6 +1185,7 @@ ClosestPointPointTriangle(vec3 Point, vec3 A, vec3 B, vec3 C)
     if (Dot6 >= 0.0f && Dot5 <= Dot6)
     {
         ClosestPoint = C; // Barycentric coordinates (0, 0, 1)
+        FoundPoint = true;
     }
 
     // Check if P is in edge region of AC, if so return projection of P onto AC
@@ -1187,6 +1194,7 @@ ClosestPointPointTriangle(vec3 Point, vec3 A, vec3 B, vec3 C)
     {
         f32 W = Dot2 / (Dot2 - Dot6);
         ClosestPoint = A + W * AC; // Barycentric coordinates (1-w, 0, w)
+        FoundPoint = true;
     }
 
     // Check if P is in edge region of BC, if so return projection of P onto BC
@@ -1195,14 +1203,102 @@ ClosestPointPointTriangle(vec3 Point, vec3 A, vec3 B, vec3 C)
     {
         f32 W = (Dot4 - Dot3) / ((Dot4 - Dot3) + (Dot5 - Dot6));
         ClosestPoint = B + W * (C - B); // Barycentric coordinates (0, 1-w, w)
+        FoundPoint = true;
     }
 
     // P inside face region. Compute Q through its barycentric coordinates (u, v, w)
-    f32 Denom = 1.0f / (VA + VB + VC);
-    f32 V = VB * Denom;
-    f32 W = VC * Denom;
-    ClosestPoint = A + AB * V + AC * W;
+    if (!FoundPoint)
+    {
+        f32 Denom = 1.0f / (VA + VB + VC);
+        f32 V = VB * Denom;
+        f32 W = VC * Denom;
+        ClosestPoint = A + AB * V + AC * W;
+    }
 
+    return ClosestPoint;
+}
+
+// Test if point lies outside plane through ABC
+// Ericson05 - 5.1.6
+internal inline bool
+IsPointOutsidePlane(vec3 P, vec3 A, vec3 B, vec3 C)
+{
+    vec3 Normal = VecCross(B - A, C - A);
+    f32 Dot = VecDot(P - A, Normal);
+    // TODO: I think epsilon is needed here, but not sure.
+    bool Result = (Dot >= 0.0f);
+    return Result;
+}
+
+// Test if points P and D lie on opposite sides of plane through ABC
+// Ericson05 - 5.1.6
+internal inline bool
+IsPointOutsidePlane(vec3 P, vec3 A, vec3 B, vec3 C, vec3 D)
+{
+    // NOTE: Use this if the winding of tetrahedron's face triangles is not known
+    vec3 Normal = VecCross(B - A, C - A);
+    f32 SignP = VecDot(P - A, Normal);
+    f32 SignD = VecDot(D - A, Normal);
+    // TODO: I think epsilon is needed here, but not sure.
+    bool Result = (SignP * SignD <= FLT_EPSILON);
+    return Result;
+}
+
+vec3
+ClosestPointPointTetrahedron(vec3 Point, vec3 A, vec3 B, vec3 C, vec3 D)
+{
+    vec3 ClosestPoint = Point;
+    f32 BestDistSq = FLT_MAX;
+
+    // If point outside face ABC, compute closest point on ABC
+    if (IsPointOutsidePlane(Point, A, B, C))
+    {
+        vec3 Q = ClosestPointPointTriangle(Point, A, B, C);
+        f32 DistSq = VecLengthSq(Q - Point);
+        if (DistSq < BestDistSq)
+        {
+            BestDistSq = DistSq;
+            ClosestPoint = Q;
+        }
+    }
+
+    // Repeat test for face ACD
+    if (IsPointOutsidePlane(Point, A, C, D))
+    {
+        vec3 Q = ClosestPointPointTriangle(Point, A, C, D);
+        f32 DistSq = VecLengthSq(Q - Point);
+        if (DistSq < BestDistSq)
+        {
+            BestDistSq = DistSq;
+            ClosestPoint = Q;
+        }
+    }
+
+    // Repeat test for face ADB
+    if (IsPointOutsidePlane(Point, A, D, B))
+    {
+        vec3 Q = ClosestPointPointTriangle(Point, A, D, B);
+        f32 DistSq = VecLengthSq(Q - Point);
+        if (DistSq < BestDistSq)
+        {
+            BestDistSq = DistSq;
+            ClosestPoint = Q;
+        }
+    }
+
+    // Repeat test for face BDC
+    if (IsPointOutsidePlane(Point, B, D, C))
+    {
+        vec3 Q = ClosestPointPointTriangle(Point, B, D, C);
+        f32 DistSq = VecLengthSq(Q - Point);
+        if (DistSq < BestDistSq)
+        {
+            BestDistSq = DistSq;
+            ClosestPoint = Q;
+        }
+    }
+
+    // If the point is inside all faces, return the point itself
     return ClosestPoint;
 }
 
