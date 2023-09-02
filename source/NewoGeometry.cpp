@@ -52,9 +52,14 @@ TriDoubleSignedArea(vec3 A, vec3 B, vec3 C)
 }
 
 internal f32
+TriDoubleSignedArea2D(f32 X1, f32 Y1, f32 X2, f32 Y2, f32 X3, f32 Y3)
+{
+    return (X1 - X2) * (Y2 - Y3) - (X2 - X3) * (Y1 - Y2);
+}
+
+internal f32
 TriDoubleSignedArea2D(vec2 A, vec2 B, vec2 C)
 {
-    // NOTE: Modified in 5.1.9.1
     return (A.X - C.X) * (B.Y - C.Y) - (A.Y - C.Y) * (B.X - C.X);
 }
 
@@ -111,22 +116,22 @@ BarycentricCoordsProjectedAreas(vec3 P, vec3 A, vec3 B, vec3 C, f32 *U, f32 *V, 
     if (X >= Y && X >= Z)
     {
         // X is largest, project to the YZ plane
-        NU = TriDoubleArea2D(P.Y, P.Z, B.Y, B.Z, C.Y, C.Z); // Area of PBC in YZ plane
-        NV = TriDoubleArea2D(P.Y, P.Z, C.Y, C.Z, A.Y, A.Z); // Area of PCA in YZ plane
+        NU = TriDoubleSignedArea2D(P.Y, P.Z, B.Y, B.Z, C.Y, C.Z); // Area of PBC in YZ plane
+        NV = TriDoubleSignedArea2D(P.Y, P.Z, C.Y, C.Z, A.Y, A.Z); // Area of PCA in YZ plane
         OOD = 1.0f / M.X; // 1 / (2 * Area of ABC in YZ plane)
     }
     else if (Y >= X && Y >= Z)
     {
         // Y is largest, project to the XZ plane
-        NU = TriDoubleArea2D(P.X, P.Z, B.X, B.Z, C.X, C.Z); // Area of PBC in XZ plane
-        NV = TriDoubleArea2D(P.X, P.Z, C.X, C.Z, A.X, A.Z); // Area of PCA in XZ plane
+        NU = TriDoubleSignedArea2D(P.X, P.Z, B.X, B.Z, C.X, C.Z); // Area of PBC in XZ plane
+        NV = TriDoubleSignedArea2D(P.X, P.Z, C.X, C.Z, A.X, A.Z); // Area of PCA in XZ plane
         OOD = 1.0f / -M.Y; // 1 / (2 * Area of ABC in XZ plane)
     }
     else
     {
         // Z is largest, project to the XY plane
-        NU = TriDoubleArea2D(P.X, P.Y, B.X, B.Y, C.X, C.Y); // Area of PBC in XY plane
-        NV = TriDoubleArea2D(P.X, P.Y, C.X, C.Y, A.X, A.Y); // Area of PCA in XY plane
+        NU = TriDoubleSignedArea2D(P.X, P.Y, B.X, B.Y, C.X, C.Y); // Area of PBC in XY plane
+        NV = TriDoubleSignedArea2D(P.X, P.Y, C.X, C.Y, A.X, A.Y); // Area of PCA in XY plane
         OOD = 1.0f / M.Z; // 1 / (2 * Area of ABC in XY plane)
     }
 
@@ -640,7 +645,7 @@ GetBoundingSphereForPointSetRitter(vec3 *Points, u32 PointCount, debug_viz_data 
 {
     Assert(Points);
 
-    sphere Result = SphereFromMostSeparatedPoints(Points, PointCount );
+    sphere Result = SphereFromMostSeparatedPoints(Points, PointCount);
 
     for (u32 PointIndex = 1; PointIndex < PointCount; ++PointIndex)
     {
@@ -668,7 +673,7 @@ sphere
 GetBoundingSphereForPointSetRitterIterative(vec3 *Points, u32 PointCount, debug_viz_data *VizData)
 {
     sphere Result = GetBoundingSphereForPointSetRitter(Points, PointCount, VizData);
-    
+
     sphere BetterResult = Result;
 
     for (u32 IterationIndex = 0; IterationIndex < RITTER_ITERATIVE_MAX_ITERATIONS; ++IterationIndex)
@@ -865,7 +870,7 @@ f32
 DistSqPointSegment(vec3 Point, vec3 Start, vec3 End);
 f32
 ClosestPointSegmentSegment(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
-                               f32 *Out_S, f32 *Out_T, vec3 *Out_PointOnA, vec3 *Out_PointOnB);
+                           f32 *Out_S, f32 *Out_T, vec3 *Out_PointOnA, vec3 *Out_PointOnB);
 
 bool
 TestSphereCapsule(sphere S, capsule C, debug_viz_data *VizData)
@@ -966,7 +971,7 @@ ClosestPointPointAABB(vec3 Point, aabb AABB)
     {
         f32 AABBMin = AABB.Center.D[AxisIndex] - AABB.Extents.D[AxisIndex];
         f32 AABBMax = AABB.Center.D[AxisIndex] + AABB.Extents.D[AxisIndex];
-        
+
         f32 PointValue = Point.D[AxisIndex];
         if (PointValue < AABBMin)
         {
@@ -1047,7 +1052,7 @@ DistSqPointOBB(vec3 Point, obb OBB)
     vec3 D = Point - OBB.Center;
 
     DistSq = 0.0f;
-    
+
     for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
     {
         f32 Dist = VecDot(D, OBB.Axes[AxisIndex]);
@@ -1107,7 +1112,7 @@ ClosestPointPointRect(vec3 Point, vec3 A, vec3 B, vec3 C)
     vec3 D = Point - A;
 
     // Start at top-left corner of rect
-    ClosestPoint  = A;
+    ClosestPoint = A;
 
     f32 Dist = VecDot(D, AB);
     f32 MaxDist = VecLengthSq(AB);
@@ -1119,7 +1124,7 @@ ClosestPointPointRect(vec3 Point, vec3 A, vec3 B, vec3 C)
     {
         ClosestPoint += (Dist / MaxDist) * AB;
     }
-    
+
     Dist = VecDot(D, AC);
     MaxDist = VecLengthSq(AC);
     if (Dist >= MaxDist)
@@ -1153,7 +1158,7 @@ ClosestPointPointTriangle(vec3 Point, vec3 A, vec3 B, vec3 C)
     vec3 AP = Point - A;
     f32 Dot1 = VecDot(AB, AP);
     f32 Dot2 = VecDot(AC, AP);
-    if (Dot1 <= 0.0f && Dot2 <= 0.0f) 
+    if (Dot1 <= 0.0f && Dot2 <= 0.0f)
     {
         ClosestPoint = A; // Barycentric coordinates (1, 0, 0)
         FoundPoint = true;
@@ -1304,7 +1309,7 @@ ClosestPointPointTetrahedron(vec3 Point, vec3 A, vec3 B, vec3 C, vec3 D)
 
 f32
 ClosestPointSegmentSegment(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
-                               f32 *Out_S, f32 *Out_T, vec3 *Out_PointOnA, vec3 *Out_PointOnB)
+                           f32 *Out_S, f32 *Out_T, vec3 *Out_PointOnA, vec3 *Out_PointOnB)
 {
     vec3 ADir = AEnd - AStart;
     vec3 BDir = BEnd - BStart;
@@ -1383,6 +1388,149 @@ ClosestPointSegmentSegment(vec3 AStart, vec3 AEnd, vec3 BStart, vec3 BEnd,
     if (Out_PointOnA) *Out_PointOnA = PointOnA;
     if (Out_PointOnB) *Out_PointOnB = PointOnB;
     return VecLengthSq(PointOnA - PointOnB);
+}
+
+bool
+TestSpherePlane(sphere Sphere, plane Plane)
+{
+    // For a normalized plane (|p.n| = 1), evaluating the plane equation for a point gives
+    // the signed distance of the point to plane
+    f32 Dist = VecDot(Sphere.Center, Plane.Normal) - Plane.Distance;
+    bool Result = (AbsF32(Dist) <= Sphere.Radius);
+    return Result;
+}
+
+bool
+IsInsideSpherePlane(sphere Sphere, plane Plane)
+{
+    f32 Dist = VecDot(Sphere.Center, Plane.Normal) - Plane.Distance;
+    bool Result = (Dist < -Sphere.Radius);
+    return Result;
+}
+
+bool
+TestSphereHalfspace(sphere Sphere, plane Plane)
+{
+    f32 Dist = VecDot(Sphere.Center, Plane.Normal) - Plane.Distance;
+    bool Result = (Dist <= Sphere.Radius);
+    return Result;
+}
+
+bool
+TestOBBPlane(obb B, plane P)
+{
+    // Compute the projection interval radius of B onto L(T) = B.Center + T * P.Normal
+    f32 Radius = (B.Extents.D[0] * AbsF32(VecDot(P.Normal, B.Axes[0])) +
+                  B.Extents.D[1] * AbsF32(VecDot(P.Normal, B.Axes[1])) +
+                  B.Extents.D[2] * AbsF32(VecDot(P.Normal, B.Axes[2])));
+
+    f32 DistFromCenter = VecDot(P.Normal, B.Center) - P.Distance;
+
+    bool Result = (AbsF32(DistFromCenter) <= Radius);
+    return Result;
+}
+
+bool
+TestAABBPlane(aabb B, plane P)
+{
+    // Compute the projection interval radius of B onto L(T) = B.Center + T * P.Normal
+    f32 Radius = (B.Extents.D[0] * AbsF32(P.Normal.D[0]) +
+                  B.Extents.D[1] * AbsF32(P.Normal.D[1]) +
+                  B.Extents.D[2] * AbsF32(P.Normal.D[2]));
+    f32 DistFromCenter = VecDot(P.Normal, B.Center) - P.Distance;
+    
+    bool Result = (AbsF32(DistFromCenter) <= Radius);
+    return Result;
+}
+
+bool
+TestSphereAABB(sphere S, aabb B)
+{
+    f32 DistSq = DistSqPointAABB(S.Center, B);
+
+    bool Result = (DistSq <= S.Radius * S.Radius);
+    return Result;
+}
+
+bool
+TestSphereAABB(sphere S, aabb B, vec3 *Out_ClosestPointOnAABB)
+{
+    vec3 ClosestPoint = ClosestPointPointAABB(S.Center, B);
+
+    if (Out_ClosestPointOnAABB) *Out_ClosestPointOnAABB = ClosestPoint;
+    bool Result = (VecLengthSq(ClosestPoint - S.Center) <= S.Radius * S.Radius);
+    return Result;
+}
+
+bool
+TestSphereOBB(sphere S, obb B, vec3 *Out_ClosestPointOnOBB)
+{
+    vec3 ClosestPoint = ClosestPointPointOBB(S.Center, B);
+
+    if (Out_ClosestPointOnOBB) *Out_ClosestPointOnOBB = ClosestPoint;
+    bool Result = (VecLengthSq(ClosestPoint - S.Center) <= S.Radius * S.Radius);
+    return Result;
+}
+
+bool
+TestSphereTriangle(sphere S, vec3 A, vec3 B, vec3 C, vec3 *Out_ClosestPointOnTri)
+{
+    vec3 ClosestPoint = ClosestPointPointTriangle(S.Center, A, B, C);
+
+    if (Out_ClosestPointOnTri) *Out_ClosestPointOnTri = ClosestPoint;
+    bool Result = (VecLengthSq(ClosestPoint - S.Center) <= S.Radius * S.Radius);
+    return Result;
+}
+
+bool
+TestTriangleAABB(vec3 A, vec3 B, vec3 C, aabb Box)
+{
+    // NOTE: Notation used in Ericson05:
+    // v0..v2 -- triangle vertices A, B, C
+    // f0..f2 -- triangle edge vectors AB, BC, CA
+    // u0..u2 -- box normals / orientation axes
+    // a00..a22 -- the nine axes of cross products between box edges and tri edges
+    // e.g.
+    //      a00 = u0 x f0 = (1, 0, 0) x f0 = (0, -f0z, f0y)
+    // p0..p2 -- projections of triangle vertices onto an axis under test
+    // e.g.
+    //      p0 = v0 * a00 = -v0y*v1z + v0z*v1y
+    //      p1 = v1 * a00 = v1y*v0z - v1z*v0z
+    //      p2 = v2 * a00 = -v2y*(v1z - v0z) + v2z*(v1y - v0y)
+
+    // Translate triangle as conceptually moving AABB to origin
+    A = A - Box.Center;
+    B = B - Box.Center;
+    C = C - Box.Center;
+
+    // Compute edge vectors for triangle
+    vec3 AB = B - A; // f0
+    vec3 BC = C - B; // f1
+    vec3 CA = A - C; // f2
+
+    //
+    // NOTE: Test axes a00..a22 (category 3)
+    //
+    f32 AProj = 0.0f, BProj = 0.0f, CProj = 0.0f, BoxRProj = 0.0f; // p0, p1, p2 and r
+    // Test axis a00 = Box.Axes[0] x AB = (1, 0, 0) x AB = (0, -ABz, ABy)
+    AProj = A.Z * B.Y - A.Y * B.Z;
+    CProj = C.Z * (B.Y - A.Y) - C.Z * (B.Z - A.Z);
+    BoxRProj = Box.Extents.D[1] * AbsF32(AB.Z) + Box.Extents.D[2] * AbsF32(AB.Y);
+    if (Max(-Max(AProj, CProj), Min(AProj, CProj)) > BoxRProj)
+    {
+        return false;
+    }
+
+    // Test axis a01 = Box.Axes[0] x BC = (1, 0, 0) x BC = (0, -BCz, BCy)
+    AProj = A.Z * B.Y - A.Y * B.Z;
+    CProj = C.Z * (B.Y - A.Y) - C.Z * (B.Z - A.Z);
+    BoxRProj = Box.Extents.D[1] * AbsF32(AB.Z) + Box.Extents.D[2] * AbsF32(AB.Y);
+    if (Max(-Max(AProj, CProj), Min(AProj, CProj)) > BoxRProj)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 #pragma warning(pop)

@@ -29,4 +29,7 @@ typedef double f64;
 #define Gigabytes(Value) (Megabytes(Value) * 1024)
 #define Terabytes(Value) (Gigabytes(Value) * 1024)
 
+#define Max(X, Y) ((X) > (Y)) ? (X) : (Y)
+#define Min(X, Y) ((X) < (Y)) ? (X) : (Y)
+
 #endif

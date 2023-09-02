@@ -186,4 +186,36 @@ ClosestPointPointTriangle(vec3 Point, vec3 A, vec3 B, vec3 C);
 vec3
 ClosestPointPointTetrahedron(vec3 Point, vec3 A, vec3 B, vec3 C, vec3 D);
 
+// Test whether a plane intersects a sphere
+bool
+TestSpherePlane(sphere Sphere, plane Plane);
+
+// Test whether a sphere is fully behind (inside negative halfspace of) a plane
+bool
+IsInsideSpherePlane(sphere Sphere, plane Plane);
+
+// Test whether a sphere intersects negative halfspace of a plane
+bool
+TestSphereHalfspace(sphere Sphere, plane Plane);
+
+// Test if an OBB intersects a plane
+bool
+TestOBBPlane(obb B, plane P);
+
+// Test if an AABB intersects a plane
+bool
+TestAABBPlane(aabb B, plane P);
+
+// Test if a sphere intersects an AABB and return the closest point on AABB
+bool
+TestSphereAABB(sphere S, aabb B, vec3 *Out_ClosestPointOnAABB);
+
+// Test if a sphere intersects an OBB and return the closest point on OBB
+bool
+TestSphereOBB(sphere S, obb B, vec3 *Out_ClosestPointOnOBB);
+
+// Test if a sphere intersects a triangle and return the closest point on triangle
+bool
+TestSphereTriangle(sphere S, vec3 A, vec3 B, vec3 C, vec3 *Out_ClosestPointOnTri);
+
 #endif
