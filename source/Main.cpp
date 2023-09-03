@@ -18,16 +18,16 @@
 
 enum test_case
 {
-    TEST_CASE_AABBS_INTERSECTION,
+    TEST_CASE_INTERSECTION_AABBS,
     TEST_CASE_POINT_SET_AABB,
     TEST_CASE_OBB_BOUNDS,
-    TEST_CASE_SPHERES_INTERSECTION,
+    TEST_CASE_INTERSECTION_SPHERES,
     TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER,
     TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_EIGEN,
     TEST_CASE_POINT_SET_BOUNDING_SPHERE_RITTER_ITERATIVE,
-    TEST_CASE_OBBS_INTERSECTION,
-    TEST_CASE_SPHERE_CAPSULE,
-    TEST_CASE_CAPSULE_CAPSULE,
+    TEST_CASE_INTERSECTION_OBBS,
+    TEST_CASE_INTERSECTION_SPHERE_CAPSULE,
+    TEST_CASE_INTERSECTION_CAPSULE_CAPSULE,
     TEST_CASE_CLOSEST_POINT_POINT_SEGMENT,
     TEST_CASE_CLOSEST_POINT_POINT_AABB,
     TEST_CASE_CLOSEST_POINT_POINT_OBB,
@@ -35,10 +35,14 @@ enum test_case
     TEST_CASE_CLOSEST_POINT_POINT_TRIANGLE,
     TEST_CASE_CLOSEST_POINT_POINT_TETRAHEDRON,
     TEST_CASE_CLOSEST_POINT_SEGMENT_SEGMENT,
+    TEST_CASE_INTERSECTION_SPHERE_AABB,
+    TEST_CASE_INTERSECTION_SPHERE_OBB,
+    TEST_CASE_INTERSECTION_SPHERE_TRIANGLE,
+    TEST_CASE_INTERSECTION_TRIANGLE_BOX,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_CLOSEST_POINT_SEGMENT_SEGMENT;
+global_variable test_case CurrentTestCase = TEST_CASE_INTERSECTION_TRIANGLE_BOX;
 
 void
 ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged);
@@ -137,17 +141,17 @@ main(int Argc, char *Argv[])
         {
             switch (SdlEvent.type)
             {
-            case SDL_QUIT:
-                ShouldQuit = true;
-                break;
-            case SDL_WINDOWEVENT:
-                if (SdlEvent.window.event == SDL_WINDOWEVENT_RESIZED)
-                {
-                    ScreenWidth = SdlEvent.window.data1;
-                    ScreenHeight = SdlEvent.window.data2;
-                    glViewport(0, 0, ScreenWidth, ScreenHeight);
-                }
-                break;
+                case SDL_QUIT:
+                    ShouldQuit = true;
+                    break;
+                case SDL_WINDOWEVENT:
+                    if (SdlEvent.window.event == SDL_WINDOWEVENT_RESIZED)
+                    {
+                        ScreenWidth = SdlEvent.window.data1;
+                        ScreenHeight = SdlEvent.window.data2;
+                        glViewport(0, 0, ScreenWidth, ScreenHeight);
+                    }
+                    break;
             }
         }
 
@@ -326,7 +330,7 @@ main(int Argc, char *Argv[])
         // Tests
         switch (CurrentTestCase)
         {
-            case TEST_CASE_AABBS_INTERSECTION:
+            case TEST_CASE_INTERSECTION_AABBS:
             {
                 //
                 // NOTE: AABBs intersection test
@@ -395,7 +399,7 @@ main(int Argc, char *Argv[])
                 DD_DrawAABox(DDRenderData, PRIM_STYLE_WIREFRAME, OrientedBoxBounds.Center, OrientedBoxBounds.Extents, vec3 { 1.0f, 1.0f, 0.0f });
 
             } break;
-            case TEST_CASE_SPHERES_INTERSECTION:
+            case TEST_CASE_INTERSECTION_SPHERES:
             {
                 //
                 // NOTE: Test intersection of 2 spheres
@@ -525,7 +529,7 @@ main(int Argc, char *Argv[])
                 }
 
             } break;
-            case TEST_CASE_OBBS_INTERSECTION:
+            case TEST_CASE_INTERSECTION_OBBS:
             {
                 //
                 // NOTE: Test intersection of 2 oriented boxes using Separating Axis Theorem
@@ -571,7 +575,7 @@ main(int Argc, char *Argv[])
                 DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_WIREFRAME, A.Center, A.Extents, Mat3FromCols(A.Axes), Color);
                 DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_WIREFRAME, B.Center, B.Extents, Mat3FromCols(B.Axes), Color);
             } break;
-            case TEST_CASE_SPHERE_CAPSULE:
+            case TEST_CASE_INTERSECTION_SPHERE_CAPSULE:
             {
                 sphere Sphere;
                 Sphere.Center = vec3 { 0.0f, 0.0f, 0.0f } + ControlledPosition;
@@ -594,7 +598,7 @@ main(int Argc, char *Argv[])
                 DD_DrawSphere(DDRenderData, PRIM_STYLE_TRANSPARENT, Sphere.Center, Sphere.Radius, Color, 29, 30);
                 DD_DrawCapsule(DDRenderData, PRIM_STYLE_TRANSPARENT, Capsule.Start, Capsule.End, Capsule.Radius, Color, 15, 30);
             } break;
-            case TEST_CASE_CAPSULE_CAPSULE:
+            case TEST_CASE_INTERSECTION_CAPSULE_CAPSULE:
             {
                 capsule A;
                 A.Start = vec3 { 0.0f, 0.0f, 0.0f } + ControlledPosition;
@@ -772,6 +776,53 @@ main(int Argc, char *Argv[])
 
                 DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, AStart, AEnd, vec3 { 1.0f, 1.0f, 1.0f });
                 DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, BStart, BEnd, vec3 { 1.0f, 1.0f, 1.0f });
+            } break;
+            case TEST_CASE_INTERSECTION_TRIANGLE_BOX:
+            {
+                vec3 Point = vec3 { -2.0f, 1.0f, 0.0f } + ControlledPosition;
+
+                obb Box;
+                Box.Center = vec3 { -1.0f, 0.0f, 0.0f };
+                Box.Extents = vec3 { 0.5f, 0.5f, 0.5f };
+                mat3 Rotation = Mat3GetRotationAroundAxis(VecNormalize(Point - Box.Center), ControlledAngle);
+                Mat3GetCols(Rotation, Box.Axes);
+
+                //vec3 A = vec3 { 1.5f, 1.0f, 0.0f } + ControlledPosition2;
+                vec3 A = vec3 { -1.2f, 0.0f, 0.0f } + ControlledPosition2;
+                vec3 B = vec3 { 2.5f, 1.0f, 5.0f } + ControlledPosition3;
+                vec3 C = vec3 { 2.0f, 2.0f, 0.0f } + ControlledPosition4;
+
+                vec3 Centroid = (A + B + C) / 3.0f;
+                vec3 Normal = VecNormalize(VecCross(B - A, C - A));
+
+                vec3 Color = vec3 { 1.0f, 1.0f, 1.0f };
+
+                if (TestTriangleBox(A, B, C, Box.Center, Box.Extents, Box.Axes))
+                {
+                    Color = vec3 { 0.0f, 1.0f, 0.0f };
+                }
+
+                DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_TRANSPARENT, Box.Center, Box.Extents, Rotation, Color);
+
+                DD_DrawTriangle(DDRenderData, PRIM_STYLE_TRANSPARENT, A, B, C, Color);
+                DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, Centroid, Centroid + 2.0f * Normal, vec3 { 0.0f, 0.0f, 1.0f });
+                if ((CurrentKeyStates[SDL_SCANCODE_LSHIFT] || CurrentKeyStates[SDL_SCANCODE_RSHIFT]) &&
+                    (CurrentKeyStates[SDL_SCANCODE_LALT] || CurrentKeyStates[SDL_SCANCODE_RALT]))
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, C, vec3 { 1.0f, 0.0f, 1.0f });
+                }
+                else if (CurrentKeyStates[SDL_SCANCODE_LSHIFT] || CurrentKeyStates[SDL_SCANCODE_RSHIFT])
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, A, vec3 { 1.0f, 0.0f, 1.0f });
+                }
+                else if (CurrentKeyStates[SDL_SCANCODE_LALT] || CurrentKeyStates[SDL_SCANCODE_RALT])
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, B, vec3 { 1.0f, 0.0f, 1.0f });
+                }
+                else
+                {
+                    DD_VisualizeRotationMat(DDRenderData, VECTOR_STYLE_OVERLAY, Rotation, 2.0f, Box.Center, vec3 { 0.5f, 0.5f, 0.5f });
+                }
             } break;
             default:
             {

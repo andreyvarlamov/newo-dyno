@@ -1438,7 +1438,7 @@ TestAABBPlane(aabb B, plane P)
                   B.Extents.D[1] * AbsF32(P.Normal.D[1]) +
                   B.Extents.D[2] * AbsF32(P.Normal.D[2]));
     f32 DistFromCenter = VecDot(P.Normal, B.Center) - P.Distance;
-    
+
     bool Result = (AbsF32(DistFromCenter) <= Radius);
     return Result;
 }
@@ -1482,6 +1482,7 @@ TestSphereTriangle(sphere S, vec3 A, vec3 B, vec3 C, vec3 *Out_ClosestPointOnTri
     return Result;
 }
 
+#if 0
 bool
 TestTriangleAABB(vec3 A, vec3 B, vec3 C, aabb Box)
 {
@@ -1522,15 +1523,87 @@ TestTriangleAABB(vec3 A, vec3 B, vec3 C, aabb Box)
     }
 
     // Test axis a01 = Box.Axes[0] x BC = (1, 0, 0) x BC = (0, -BCz, BCy)
-    AProj = A.Z * B.Y - A.Y * B.Z;
-    CProj = C.Z * (B.Y - A.Y) - C.Z * (B.Z - A.Z);
-    BoxRProj = Box.Extents.D[1] * AbsF32(AB.Z) + Box.Extents.D[2] * AbsF32(AB.Y);
-    if (Max(-Max(AProj, CProj), Min(AProj, CProj)) > BoxRProj)
-    {
-        return false;
-    }
+    // ...
 
     return true;
+}
+#endif
+
+internal inline bool
+IsSeparatingAxisTriangleBox(vec3 TestAxis, vec3 A, vec3 B, vec3 C, vec3 BoxExtents, vec3 *BoxAxes)
+{
+    f32 AProj = VecDot(A, TestAxis);
+    f32 BProj = VecDot(B, TestAxis);
+    f32 CProj = VecDot(C, TestAxis);
+    f32 BoxRProj = (BoxExtents.D[0] * AbsF32(VecDot(BoxAxes[0], TestAxis)) +
+                    BoxExtents.D[1] * AbsF32(VecDot(BoxAxes[1], TestAxis)) +
+                    BoxExtents.D[2] * AbsF32(VecDot(BoxAxes[2], TestAxis)));
+    f32 MaxTriVertProj = Max(-Max(Max(AProj, BProj), CProj), Min(Min(AProj, BProj), CProj));
+    bool Result = (MaxTriVertProj > BoxRProj);
+    return Result;
+}
+
+bool
+TestTriangleBox(vec3 A, vec3 B, vec3 C, vec3 BoxCenter, vec3 BoxExtents, vec3 *BoxAxes)
+{
+    // Translate triangle as conceptually moving AABB to origin
+    A = A - BoxCenter;
+    B = B - BoxCenter;
+    C = C - BoxCenter;
+
+    // Compute edge vectors for triangle
+    vec3 AB = B - A; // f0
+    vec3 BC = C - B; // f1
+    vec3 CA = A - C; // f2
+
+    //
+    // NOTE: Test axes a00..a22 (category 3)
+    // aIJ = uI x fJ
+    //
+    vec3 Edges[] = { AB, BC, CA };
+    for (u32 BoxAxisIndex = 0; BoxAxisIndex < 3; ++BoxAxisIndex)
+    {
+        for (u32 EdgeIndex = 0; EdgeIndex < 3; ++EdgeIndex)
+        {
+            // TODO: Robustness issues (see Ericson05 5.2.1.1)
+            vec3 TestAxis = VecNormalize(VecCross(BoxAxes[BoxAxisIndex], Edges[EdgeIndex]));
+            if (IsSeparatingAxisTriangleBox(TestAxis, A, B, C, BoxExtents, BoxAxes))
+            {
+                return false;
+            }
+        }
+    }
+
+    //
+    // NOTE: Test box's 3 normals (category 1)
+    //
+    for (u32 BoxAxisIndex = 0; BoxAxisIndex < 3; ++BoxAxisIndex)
+    {
+        vec3 TestAxis = BoxAxes[BoxAxisIndex];
+        if (IsSeparatingAxisTriangleBox(TestAxis, A, B, C, BoxExtents, BoxAxes))
+        {
+            return false;
+        }
+    }
+
+    //
+    // NOTE: Test triangle's normal (category 2)
+    // All triangle vertices project onto the triangle normal in the same point by definition,
+    // so the same test as the intersection test between a box and a plane will suffice
+    //
+    {
+        plane TrianglePlane;
+        TrianglePlane.Normal = VecCross(AB, BC); // TestOBBPlane doesn't care if the plane normal is unit
+        TrianglePlane.Distance = VecDot(TrianglePlane.Normal, A);
+        obb Box;
+        Box.Center = BoxCenter;
+        Box.Extents = BoxExtents;
+        for (u32 BoxAxisIndex = 0; BoxAxisIndex < 3; ++BoxAxisIndex)
+        {
+            Box.Axes[BoxAxisIndex] = BoxAxes[BoxAxisIndex];
+        }
+        return TestOBBPlane(Box, TrianglePlane);
+    }
 }
 
 #pragma warning(pop)
