@@ -779,32 +779,34 @@ main(int Argc, char *Argv[])
             } break;
             case TEST_CASE_INTERSECTION_TRIANGLE_BOX:
             {
-                vec3 Point = vec3 { -2.0f, 1.0f, 0.0f } + ControlledPosition;
+                glDisable(GL_CULL_FACE);
+
+                vec3 Point = vec3 { -1.0f, 1.0f, 0.0f } + ControlledPosition;
+                DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, Point, vec3 { 1.0f, 1.0f, 1.0f });
 
                 obb Box;
                 Box.Center = vec3 { -1.0f, 0.0f, 0.0f };
                 Box.Extents = vec3 { 0.5f, 0.5f, 0.5f };
-                mat3 Rotation = Mat3GetRotationAroundAxis(VecNormalize(Point - Box.Center), ControlledAngle);
+                mat3 Rotation = Mat3GetRotationAroundAxis(VecNormalize(Point - Box.Center), DegreesToRadians(45.0f));
                 Mat3GetCols(Rotation, Box.Axes);
 
-                //vec3 A = vec3 { 1.5f, 1.0f, 0.0f } + ControlledPosition2;
-                vec3 A = vec3 { -1.2f, 0.0f, 0.0f } + ControlledPosition2;
+                vec3 A = vec3 { -0.8f, 0.0f, 0.0f } + ControlledPosition2;
                 vec3 B = vec3 { 2.5f, 1.0f, 5.0f } + ControlledPosition3;
                 vec3 C = vec3 { 2.0f, 2.0f, 0.0f } + ControlledPosition4;
-
                 vec3 Centroid = (A + B + C) / 3.0f;
                 vec3 Normal = VecNormalize(VecCross(B - A, C - A));
 
                 vec3 Color = vec3 { 1.0f, 1.0f, 1.0f };
 
-                if (TestTriangleBox(A, B, C, Box.Center, Box.Extents, Box.Axes))
+                debug_viz_data VizData = {};
+                if (TestTriangleBox(A, B, C, Box.Center, Box.Extents, Box.Axes, &VizData))
                 {
                     Color = vec3 { 0.0f, 1.0f, 0.0f };
                 }
 
+                DD_DrawTriangle(DDRenderData, PRIM_STYLE_TRANSPARENT, A, B, C, Color);
                 DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_TRANSPARENT, Box.Center, Box.Extents, Rotation, Color);
 
-                DD_DrawTriangle(DDRenderData, PRIM_STYLE_TRANSPARENT, A, B, C, Color);
                 DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, Centroid, Centroid + 2.0f * Normal, vec3 { 0.0f, 0.0f, 1.0f });
                 if ((CurrentKeyStates[SDL_SCANCODE_LSHIFT] || CurrentKeyStates[SDL_SCANCODE_RSHIFT]) &&
                     (CurrentKeyStates[SDL_SCANCODE_LALT] || CurrentKeyStates[SDL_SCANCODE_RALT]))
@@ -823,6 +825,8 @@ main(int Argc, char *Argv[])
                 {
                     DD_VisualizeRotationMat(DDRenderData, VECTOR_STYLE_OVERLAY, Rotation, 2.0f, Box.Center, vec3 { 0.5f, 0.5f, 0.5f });
                 }
+
+                DrawDebugVizData(DDRenderData, &VizData);
             } break;
             default:
             {

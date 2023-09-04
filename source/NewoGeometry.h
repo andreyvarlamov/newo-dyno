@@ -218,9 +218,10 @@ TestSphereOBB(sphere S, obb B, vec3 *Out_ClosestPointOnOBB);
 bool
 TestSphereTriangle(sphere S, vec3 A, vec3 B, vec3 C, vec3 *Out_ClosestPointOnTri);
 
-// Test if a triangle intersects a box. Note, this is the most general SAT test, without any optimizations
+// Test if a triangle intersects a box. Note, this is the most general SAT test, without any optimizations.
+// NOTE: This expects non-degenerate primitives only for now.
 // TODO: Write an optimized version for AABB (maybe even OBB can be optimized) as demonstrated in Ericson05 - 5.2.9
 bool
-TestTriangleBox(vec3 A, vec3 B, vec3 C, vec3 BoxCenter, vec3 BoxExtents, vec3 *BoxAxes);
+TestTriangleBox(vec3 A, vec3 B, vec3 C, vec3 BoxCenter, vec3 BoxExtents, vec3 *BoxAxes, debug_viz_data *VizData);
 
 #endif

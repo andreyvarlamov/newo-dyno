@@ -1544,7 +1544,7 @@ IsSeparatingAxisTriangleBox(vec3 TestAxis, vec3 A, vec3 B, vec3 C, vec3 BoxExten
 }
 
 bool
-TestTriangleBox(vec3 A, vec3 B, vec3 C, vec3 BoxCenter, vec3 BoxExtents, vec3 *BoxAxes)
+TestTriangleBox(vec3 A, vec3 B, vec3 C, vec3 BoxCenter, vec3 BoxExtents, vec3 *BoxAxes, debug_viz_data *VizData)
 {
     // Translate triangle as conceptually moving AABB to origin
     A = A - BoxCenter;
@@ -1561,13 +1561,18 @@ TestTriangleBox(vec3 A, vec3 B, vec3 C, vec3 BoxCenter, vec3 BoxExtents, vec3 *B
     // aIJ = uI x fJ
     //
     vec3 Edges[] = { AB, BC, CA };
+    vec3 PointAlternativesForParallelEdges[] = { A, B, C };
     for (u32 BoxAxisIndex = 0; BoxAxisIndex < 3; ++BoxAxisIndex)
     {
         for (u32 EdgeIndex = 0; EdgeIndex < 3; ++EdgeIndex)
         {
-            // TODO: Robustness issues (see Ericson05 5.2.1.1)
-            vec3 TestAxis = VecNormalize(VecCross(BoxAxes[BoxAxisIndex], Edges[EdgeIndex]));
-            if (IsSeparatingAxisTriangleBox(TestAxis, A, B, C, BoxExtents, BoxAxes))
+            // NOTE: For robustness issues, see Ericson05 5.2.1.1.
+            // But here I found, that I might need to simply discard that axis, I think this makes sense:
+            // https://stackoverflow.com/questions/44716259/what-to-do-when-cross-products-are-zero-with-separating-axis-theorem-sat
+            // For now, I will discard axes that are zero and not check for separation, so I don't get false negatives (false separating axes - collisions not deteced).
+            // If I ever get false positives caused by parallel edges, I will return to this.
+            vec3 TestAxis = VecCross(BoxAxes[BoxAxisIndex], Edges[EdgeIndex]);
+            if (!IsZeroVector(TestAxis) && IsSeparatingAxisTriangleBox(TestAxis, A, B, C, BoxExtents, BoxAxes))
             {
                 return false;
             }
@@ -1596,14 +1601,75 @@ TestTriangleBox(vec3 A, vec3 B, vec3 C, vec3 BoxCenter, vec3 BoxExtents, vec3 *B
         TrianglePlane.Normal = VecCross(AB, BC); // TestOBBPlane doesn't care if the plane normal is unit
         TrianglePlane.Distance = VecDot(TrianglePlane.Normal, A);
         obb Box;
-        Box.Center = BoxCenter;
+        Box.Center = vec3 {}; // Triangle is already translated so that the box is at origin
         Box.Extents = BoxExtents;
         for (u32 BoxAxisIndex = 0; BoxAxisIndex < 3; ++BoxAxisIndex)
         {
             Box.Axes[BoxAxisIndex] = BoxAxes[BoxAxisIndex];
         }
         return TestOBBPlane(Box, TrianglePlane);
+        // I think robustness of this doesn't necessarily matter, because if a triangle degenerates
+        // into a line (and I think even a point) the box face normals tests should still detect that
     }
+}
+
+internal inline bool
+IsSeparatingAxisTriangleTriangle(vec3 TestAxis, vec3 A, vec3 B, vec3 C, vec3 D, vec3 E, vec3 F)
+{
+    f32 AProj = VecDot(A, TestAxis);
+    f32 BProj = VecDot(B, TestAxis);
+    f32 CProj = VecDot(C, TestAxis);
+    f32 DProj = VecDot(D, TestAxis);
+    f32 EProj = VecDot(E, TestAxis);
+    f32 FProj = VecDot(F, TestAxis);
+    f32 MaxTriAVertProj = Max(-Max(Max(AProj, BProj), CProj), Min(Min(AProj, BProj), CProj));
+    f32 MaxTriDVertProj = Max(-Max(Max(DProj, EProj), FProj), Min(Min(DProj, EProj), FProj));
+    bool Result = (MaxTriAVertProj > MaxTriDVertProj);
+    return Result;
+}
+
+bool
+TestTriangleTriangle(vec3 A, vec3 B, vec3 C, vec3 D, vec3 E, vec3 F, debug_viz_data *VizData)
+{
+    vec3 AB = B - A;
+    vec3 BC = C - B;
+    vec3 CA = A - C;
+
+    vec3 DE = E - D;
+    vec3 EF = F - E;
+    vec3 FD = D - F;
+
+    vec3 EdgesA[] = { AB, BC, CA };
+    vec3 EdgesD[] = { DE, EF, FD };
+    for (u32 EdgeA_Axis = 0; EdgeA_Axis < 3; ++EdgeA_Axis)
+    {
+        for (u32 EdgeD_Axis = 0; EdgeD_Axis < 3; ++EdgeD_Axis)
+        {
+            vec3 TestAxis = VecCross(EdgesA[EdgeA_Axis], EdgesD[EdgeD_Axis]);
+            if (!IsZeroVector(TestAxis) && IsSeparatingAxisTriangleTriangle(TestAxis, A, B, C, D, E, F))
+            {
+                return false;
+            }
+        }
+    }
+
+    {
+        vec3 TestAxis = VecCross(AB, BC);
+        if (!IsZeroVector(TestAxis) && IsSeparatingAxisTriangleTriangle(TestAxis, A, B, C, D, E, F))
+        {
+            return false;
+        }
+    }
+
+    {
+        vec3 TestAxis = VecCross(DE, EF);
+        if (!IsZeroVector(TestAxis) && IsSeparatingAxisTriangleTriangle(TestAxis, A, B, C, D, E, F))
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 #pragma warning(pop)
