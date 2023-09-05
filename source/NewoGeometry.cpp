@@ -1596,9 +1596,11 @@ TestTriangleBox(vec3 A, vec3 B, vec3 C, vec3 BoxCenter, vec3 BoxExtents, vec3 *B
     // All triangle vertices project onto the triangle normal in the same point by definition,
     // so the same test as the intersection test between a box and a plane will suffice
     //
+    vec3 TriNormal = VecCross(AB, BC);
+    if (!IsZeroVector(TriNormal))
     {
         plane TrianglePlane;
-        TrianglePlane.Normal = VecCross(AB, BC); // TestOBBPlane doesn't care if the plane normal is unit
+        TrianglePlane.Normal = TriNormal; // TestOBBPlane doesn't care if the plane normal is unit
         TrianglePlane.Distance = VecDot(TrianglePlane.Normal, A);
         obb Box;
         Box.Center = vec3 {}; // Triangle is already translated so that the box is at origin
@@ -1607,10 +1609,15 @@ TestTriangleBox(vec3 A, vec3 B, vec3 C, vec3 BoxCenter, vec3 BoxExtents, vec3 *B
         {
             Box.Axes[BoxAxisIndex] = BoxAxes[BoxAxisIndex];
         }
-        return TestOBBPlane(Box, TrianglePlane);
         // I think robustness of this doesn't necessarily matter, because if a triangle degenerates
         // into a line (and I think even a point) the box face normals tests should still detect that
+        if (!TestOBBPlane(Box, TrianglePlane))
+        {
+            return false;
+        }
     }
+
+    return true;
 }
 
 internal inline bool
@@ -1622,9 +1629,11 @@ IsSeparatingAxisTriangleTriangle(vec3 TestAxis, vec3 A, vec3 B, vec3 C, vec3 D, 
     f32 DProj = VecDot(D, TestAxis);
     f32 EProj = VecDot(E, TestAxis);
     f32 FProj = VecDot(F, TestAxis);
-    f32 MaxTriAVertProj = Max(-Max(Max(AProj, BProj), CProj), Min(Min(AProj, BProj), CProj));
-    f32 MaxTriDVertProj = Max(-Max(Max(DProj, EProj), FProj), Min(Min(DProj, EProj), FProj));
-    bool Result = (MaxTriAVertProj > MaxTriDVertProj);
+    f32 TriAIntervalMin = Min(Min(AProj, BProj), CProj);
+    f32 TriAIntervalMax = Max(Max(AProj, BProj), CProj);
+    f32 TriDIntervalMin = Min(Min(DProj, EProj), FProj);
+    f32 TriDIntervalMax = Max(Max(DProj, EProj), FProj);
+    bool Result = ((TriAIntervalMax < TriDIntervalMin) || (TriDIntervalMax < TriAIntervalMin));
     return Result;
 }
 

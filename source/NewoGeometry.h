@@ -224,4 +224,11 @@ TestSphereTriangle(sphere S, vec3 A, vec3 B, vec3 C, vec3 *Out_ClosestPointOnTri
 bool
 TestTriangleBox(vec3 A, vec3 B, vec3 C, vec3 BoxCenter, vec3 BoxExtents, vec3 *BoxAxes, debug_viz_data *VizData);
 
+// Test if two triangles intersect. Note, this is the most general unoptimized SAT test.
+// NOTE: This expects non-coplanar and non-degenerate triangles only for now.
+// TODO: Write an optimized and more robust version of this when needed.
+// E.g. Moller's interval overlap method: http://web.archive.org/web/19990203013328/http://www.acm.org/jgt/papers/Moller97/tritri.html
+bool
+TestTriangleTriangle(vec3 A, vec3 B, vec3 C, vec3 D, vec3 E, vec3 F, debug_viz_data *VizData);
+
 #endif

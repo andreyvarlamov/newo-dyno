@@ -39,10 +39,11 @@ enum test_case
     TEST_CASE_INTERSECTION_SPHERE_OBB,
     TEST_CASE_INTERSECTION_SPHERE_TRIANGLE,
     TEST_CASE_INTERSECTION_TRIANGLE_BOX,
+    TEST_CASE_INTERSECTION_TRIANGLE_TRIANGLE,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_INTERSECTION_TRIANGLE_BOX;
+global_variable test_case CurrentTestCase = TEST_CASE_INTERSECTION_TRIANGLE_TRIANGLE;
 
 void
 ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged);
@@ -824,6 +825,57 @@ main(int Argc, char *Argv[])
                 else
                 {
                     DD_VisualizeRotationMat(DDRenderData, VECTOR_STYLE_OVERLAY, Rotation, 2.0f, Box.Center, vec3 { 0.5f, 0.5f, 0.5f });
+                }
+
+                DrawDebugVizData(DDRenderData, &VizData);
+            } break;
+            case TEST_CASE_INTERSECTION_TRIANGLE_TRIANGLE:
+            {
+                glDisable(GL_CULL_FACE);
+                vec3 TriAPosition = vec3 { -1.5f, 0.0f, 0.0f } + ControlledPosition;
+                mat3 Rotation = Mat3GetRotationAroundAxis(vec3 { 0.0f, 1.0f, 0.0f }, DegreesToRadians(45.0f + ControlledAngle));
+                vec3 A = (Rotation * (vec3 { -1.0f, 0.0f, 0.0f })) + TriAPosition;
+                vec3 B = (Rotation * (vec3 {  1.0f, 0.0f, 0.0f })) + TriAPosition;
+                vec3 C = (Rotation * (vec3 {  0.0f, 1.0f, 0.0f })) + TriAPosition;
+                vec3 CentroidA = (A + B + C) / 3.0f;
+                vec3 NormalA = VecNormalize(VecCross(B - A, C - A));
+
+                vec3 D = vec3 { 1.0f, 0.0f, 0.0f } + ControlledPosition2;
+                vec3 E = vec3 { 2.0f, 0.0f, 0.0f } + ControlledPosition3;
+                vec3 F = vec3 { 1.5f, 1.0f, 0.0f } + ControlledPosition4;
+                vec3 CentroidD = (D + E + F) / 3.0f;
+                vec3 NormalD = VecNormalize(VecCross(E - D, F - D));
+
+                vec3 Color = vec3 { 1.0f, 1.0f, 1.0f };
+
+                debug_viz_data VizData = {};
+                if (TestTriangleTriangle(A, B, C, D, E, F, &VizData))
+                {
+                    Color = vec3 { 0.0f, 1.0f, 0.0f };
+                }
+
+                DD_DrawTriangle(DDRenderData, PRIM_STYLE_TRANSPARENT, A, B, C, Color);
+                DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, CentroidA, CentroidA + 2.0f * NormalA, vec3 { 0.0f, 0.0f, 1.0f });
+
+                DD_DrawTriangle(DDRenderData, PRIM_STYLE_TRANSPARENT, D, E, F, Color);
+                DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, CentroidD, CentroidD + 2.0f * NormalD, vec3 { 0.0f, 0.0f, 1.0f });
+
+                if ((CurrentKeyStates[SDL_SCANCODE_LSHIFT] || CurrentKeyStates[SDL_SCANCODE_RSHIFT]) &&
+                    (CurrentKeyStates[SDL_SCANCODE_LALT] || CurrentKeyStates[SDL_SCANCODE_RALT]))
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, F, vec3 { 1.0f, 0.0f, 1.0f });
+                }
+                else if (CurrentKeyStates[SDL_SCANCODE_LSHIFT] || CurrentKeyStates[SDL_SCANCODE_RSHIFT])
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, D, vec3 { 1.0f, 0.0f, 1.0f });
+                }
+                else if (CurrentKeyStates[SDL_SCANCODE_LALT] || CurrentKeyStates[SDL_SCANCODE_RALT])
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, E, vec3 { 1.0f, 0.0f, 1.0f });
+                }
+                else
+                {
+                    DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, CentroidA, vec3 { 1.0f, 0.0f, 1.0f });
                 }
 
                 DrawDebugVizData(DDRenderData, &VizData);
