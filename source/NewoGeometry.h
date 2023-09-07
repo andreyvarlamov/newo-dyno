@@ -231,4 +231,60 @@ TestTriangleBox(vec3 A, vec3 B, vec3 C, vec3 BoxCenter, vec3 BoxExtents, vec3 *B
 bool
 TestTriangleTriangle(vec3 A, vec3 B, vec3 C, vec3 D, vec3 E, vec3 F, debug_viz_data *VizData);
 
+// Test if a line segment intersects with a plane, and return the point of intersection. Ericson05 - 5.3.1
+bool
+IntersectSegmentPlane(vec3 A, vec3 B, plane P, f32 *Out_T, vec3 *Out_Q);
+
+// Test if a line segment intersects with a plane, and return the point of intersection. 
+// Takes 3 non-coplanar points for a plane. Ericson05 - 5.3.1
+bool
+IntersectSegmentPlane(vec3 A, vec3 B, vec3 D, vec3 E, vec3 F, f32 *Out_T, vec3 *Out_Q);
+
+// Test if a ray intersects with a sphere, and return the point of intersection.
+// Ray direction (D) has to be normalized.
+// Ericson05 - 5.3.2
+bool
+IntersectRaySphere(vec3 P, vec3 D, sphere S, f32 *Out_T, vec3 *Out_Q);
+
+// Test if a ray intersects with a sphere.
+// More optimized because it doesn't calculate the point of intersection, and has early exits.
+// Ray direction (D) has to be normalized.
+// Ericson05 - 5.3.2
+bool
+TestRaySphere(vec3 P, vec3 D, sphere S);
+
+// Test if a ray intersects with an AABB.
+// Ray direction (D) has to be normalized.
+// Ericson05 - 5.3.3
+bool
+IntersectRayAABB(vec3 P, vec3 D, aabb A, f32 *Out_TMin, vec3 *Out_Q);
+
+// Test if a line segment intersects with an AABB using SAT
+// Ericson05 - 5.3.3
+bool
+TestSegmentAABB(vec3 P0, vec3 P1, aabb B);
+
+// Test if a line intersects with a triangle ABC, and return the barycentric coordinates of the intersection
+// Ericson05 - 5.3.4
+bool
+IntersectLineTriangle(vec3 P, vec3 Q, vec3 A, vec3 B, vec3 C, f32 *Out_U, f32 *Out_V, f32 *Out_W);
+
+
+// Test if a line intersects with a quad ABCD, and return the intersection point
+// Ericson05 - 5.3.5
+bool
+IntersectLineQuad(vec3 P, vec3 Q, vec3 A, vec3 B, vec3 C, vec3 D, vec3 *Out_IntersectionPoint);
+
+// Test if a line segment PQ intersects with a triangle ABC, and return barycentric coordinates of the intersection
+bool
+IntersectSegmentTriangle(vec3 P, vec3 Q, vec3 A, vec3 B, vec3 C, f32 *Out_U, f32 *Out_V, f32 *Out_W, f32 *Out_T);
+
+// Test if a ray intersects with triangle ABC, and return barycentric coordinates of the intersection
+bool
+IntersectRayTriangle(vec3 P, vec3 RayDir, vec3 A, vec3 B, vec3 C, f32 *Out_U, f32 *Out_V, f32 *Out_W, f32 *Out_T);
+
+// Test if a segment intersects with cylinder, and return T at which the intersection occurs
+bool
+IntersectSegmentCylinder(vec3 SegA, vec3 SegB, vec3 CylP, vec3 CylQ, f32 CylR, f32 *Out_T);
+
 #endif

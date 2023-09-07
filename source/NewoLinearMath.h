@@ -221,6 +221,12 @@ VecCross(vec3 V0, vec3 V1)
         V0.X * V1.Y - V0.Y * V1.X };
 }
 
+internal inline f32
+VecScalarTriple(vec3 A, vec3 B, vec3 C)
+{
+    return VecDot(A, VecCross(B, C));
+}
+
 internal inline bool
 IsZeroVector(vec3 Vector)
 {

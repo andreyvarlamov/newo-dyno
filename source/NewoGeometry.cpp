@@ -1681,4 +1681,492 @@ TestTriangleTriangle(vec3 A, vec3 B, vec3 C, vec3 D, vec3 E, vec3 F, debug_viz_d
     return true;
 }
 
+bool
+IntersectSegmentPlane(vec3 A, vec3 B, plane P, f32 *Out_T, vec3 *Out_Q)
+{
+    vec3 AB = B - A;
+    f32 T = (P.Distance - VecDot(P.Normal, A)) / VecDot(P.Normal, AB);
+    if (Out_T) *Out_T = T;
+
+    if (T >= 0.0f && T <= 1.0f)
+    {
+        if (Out_Q) *Out_Q = A + T * AB;
+        return true;
+    }
+
+    return false;
+}
+
+bool
+IntersectSegmentPlane(vec3 A, vec3 B, vec3 D, vec3 E, vec3 F, f32 *Out_T, vec3 *Out_Q)
+{
+    plane P;
+    P.Normal = VecCross(E - D, F - D);
+    P.Distance = VecDot(P.Normal, D);
+    return IntersectSegmentPlane(A, B, P, Out_T, Out_Q);
+}
+
+bool
+IntersectRaySphere(vec3 P, vec3 D, sphere S, f32 *Out_T, vec3 *Out_Q)
+{
+    // m = P - C -- Vector from sphere center to point
+    vec3 M = P - S.Center;
+    // Quadratic equation = t^2 + 2*dot(m, d)*t + dot(m,m) - r^2 = 0
+    // With b = dot(m,d); c = dot(m,m) - r^2
+    f32 B = VecDot(M, D);
+    f32 C = VecLengthSq(M) - S.Radius * S.Radius;
+    if (C > 0.0f && B > 0.0f)
+    {
+        // Exit if ray's origin is outside S (C > 0) and ray is pointing away from S (B > 0)
+        return false;
+    }
+
+    f32 Discriminant = B * B - C;
+    // A negative discriminant corresponds to ray missing sphere
+    if (Discriminant < 0.0f)
+    {
+        return false;
+    }
+
+    f32 T = -B - SqrtF32(Discriminant); // The smallest root of polynomial - the earliest (or the only) intersection
+    if (T < 0.0f)
+    {
+        T = 0.0f;
+    }
+
+    if (Out_T) *Out_T = T;
+    if (Out_Q) *Out_Q = P + T * D;
+
+    return true;
+}
+
+bool
+TestRaySphere(vec3 P, vec3 D, sphere S)
+{
+    vec3 M = P - S.Center;
+    f32 C = VecLengthSq(M) - S.Radius * S.Radius;
+    // If there is definitely at least one real root, there must be an intersection
+    if (C <= 0.0f)
+    {
+        return false;
+    }
+
+    f32 B = VecDot(M, D);
+    // Early exit if ray origin outside sphere and ray pointing away from sphere
+    if (B > 0.0f)
+    {
+        return false;
+    }
+
+    f32 Discriminant = B * B - C;
+    // Negative discriminant - ray missin sphere
+    if (Discriminant < 0.0f)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool
+IntersectRayAABB(vec3 P, vec3 D, aabb A, f32 *Out_TMin, vec3 *Out_Q)
+{
+    f32 TMin = 0.0f;
+    f32 TMax = FLT_MAX;
+
+    for (u32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
+    {
+        f32 AMin = A.Center.D[AxisIndex] - A.Extents.D[AxisIndex];
+        f32 AMax = A.Center.D[AxisIndex] + A.Extents.D[AxisIndex];
+        if (AbsF32(D.D[AxisIndex] <= FLT_EPSILON))
+        {
+            // Ray is parallel to slab. No hit if origin is not within slab
+            if (P.D[AxisIndex] < AMin || P.D[AxisIndex] > AMax)
+            {
+                return false;
+            }
+            else
+            {
+                f32 OneOverD = 1.0f / D.D[AxisIndex];
+                f32 T1 = (AMin - P.D[AxisIndex]) * OneOverD;
+                f32 T2 = (AMax - P.D[AxisIndex]) * OneOverD;
+                // Make T1 be intersection with near plane, T2 - with far plane
+                if (T1 > T2)
+                {
+                    f32 Temp = T1;
+                    T1 = T2;
+                    T2 = Temp;
+                }
+                // Compute the intersection of slab intersection intervals
+                if (T1 > TMin)
+                {
+                    TMin = T1;
+                }
+                if (T2 > TMax)
+                {
+                    TMax = T2;
+                }
+
+                if (TMin > TMax)
+                {
+                    return false;
+                }
+            }
+        }
+    }
+
+    // Ray intersects all 3 slabs. Return pooint Q and intersection t value (TMin)
+    if (Out_TMin) *Out_TMin = TMin;
+    if (Out_Q) *Out_Q = P + D * TMin;
+
+    return true;
+}
+
+bool
+TestSegmentAABB(vec3 P0, vec3 P1, aabb B)
+{
+    vec3 M = (P0 + P1) * 0.5f; // Segment midpoint
+    vec3 D = P1 - M; // Segment halflength vector
+    M = M - B.Center; // Translate box and segment to origin
+    // Try world coordinate axes as separating axes
+    f32 ADX = AbsF32(D.X);
+    if (AbsF32(M.X) > B.Extents.X + ADX)
+    {
+        return false;
+    }
+    f32 ADY = AbsF32(D.Y);
+    if (AbsF32(M.Y) > B.Extents.Y + ADY)
+    {
+        return false;
+    }
+    f32 ADZ = AbsF32(D.Z);
+    if (AbsF32(M.Z) > B.Extents.Z + ADZ)
+    {
+        return false;
+    }
+
+    // Add in an epsilon term to counteract arithmetic errors when segment is (near) parallel
+    // to a coordinate axis
+    ADX += FLT_EPSILON; ADY += FLT_EPSILON; ADZ += FLT_EPSILON;
+
+    // Try cross products of segment direction vector with coordinate axes
+    if (AbsF32(M.Y * D.Z - M.Z * D.Y) > B.Extents.Y * ADZ + B.Extents.Z * ADY)
+    {
+        return false;
+    }
+    if (AbsF32(M.Z * D.X - M.X * D.Z) > B.Extents.X * ADZ + B.Extents.Z * ADX)
+    {
+        return false;
+    }
+    if (AbsF32(M.X * D.Y - M.Y * D.X) > B.Extents.X * ADY + B.Extents.Y * ADX)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool
+IntersectLineTriangle(vec3 P, vec3 Q, vec3 A, vec3 B, vec3 C, f32 *Out_U, f32 *Out_V, f32 *Out_W)
+{
+    vec3 PQ = Q - P;
+    vec3 PA = A - P;
+    vec3 PB = B - P;
+    vec3 PC = C - P;
+
+    // Test if PQ is inside the edges BC, CA and AB. Done by testing that the signed
+    // tetrahedral volumes, computes using scalar triple products, are all positive
+    vec3 M = VecCross(PQ, PC);
+    f32 U = VecDot(PB, M);
+    if (U < 0.0f)
+    {
+        return false;
+    }
+    f32 V = -VecDot(PA, M);
+    if (V < 0.0f) 
+    {
+        return false;
+    }
+    f32 W = VecScalarTriple(PQ, PB, PA);
+    if (W < 0.0f)
+    {
+        return false;
+    }
+
+    if (Out_U || Out_V || Out_W)
+    {
+        f32 Denominator = 1.0f / (U + V + W);
+        if (Out_U) *Out_U = U * Denominator;
+        if (Out_V) *Out_V = V * Denominator;
+        if (Out_W) *Out_W = W * Denominator;
+    }
+
+    return true;
+}
+
+bool
+IntersectLineQuad(vec3 P, vec3 Q, vec3 A, vec3 B, vec3 C, vec3 D, vec3 *Out_IntersectionPoint)
+{
+    vec3 PQ = Q - P;
+    vec3 PA = A - P;
+    vec3 PB = B - P;
+    vec3 PC = C - P;
+
+    // Determine which triangle to test against by testing against diagonal first
+    vec3 M = VecCross(PC, PQ);
+    f32 V = VecDot(PA, M);
+    if (V >= 0.0f)
+    {
+        // Test intersection against triangle ABC
+        f32 U = -VecDot(PB, M);
+        if (U < 0.0f)
+        {
+            return false;
+        }
+        f32 W = VecScalarTriple(PQ, PB, PA);
+        if (W < 0.0f)
+        {
+            return false;
+        }
+
+        // Compute intersection point from barycentric coordinates (u,v,w)
+        if(Out_IntersectionPoint)
+        {
+            f32 Denominator = 1.0f / (U + V + W);
+            *Out_IntersectionPoint = (U * Denominator * A + V * Denominator * B + W * Denominator * C);
+        }
+    }
+    else
+    {
+        // Test intersection against triangle DAC
+        vec3 PD = D - P;
+        f32 U = VecDot(PD, M);
+        if (U < 0.0f)
+        {
+            return false;
+        }
+        f32 W = VecScalarTriple(PQ, PA, PD);
+        if (W < 0.0f)
+        {
+            return false;
+        }
+
+        // Compute intersection point
+        if(Out_IntersectionPoint)
+        {
+            V = -V;
+            f32 Denominator = 1.0f / (U + V + W);
+            *Out_IntersectionPoint = (U * Denominator * A + V * Denominator * B + W * Denominator * C);
+        }
+    }
+
+    return true;
+}
+
+bool
+IntersectSegmentTriangle(vec3 P, vec3 Q, vec3 A, vec3 B, vec3 C, f32 *Out_U, f32 *Out_V, f32 *Out_W, f32 *Out_T)
+{
+    vec3 AB = B - A;
+    vec3 AC = C - A;
+    vec3 QP = P - Q;
+
+    // Compute triangle normal
+    vec3 N = VecCross(AB, AC);
+
+    // Compute denominator d. If d <= 0, segment is parallel to or points away from triangle - exit early
+    f32 Denominator = VecDot(QP, N);
+    if (Denominator <= 0.0f)
+    {
+        return false;
+    }
+
+    // Compute t - value of PQ at intersection with the plane of the triangle.
+    // Delay dividing by d until intersection has been found to actually pierce the triangle.
+    vec3 AP = P - A;
+    f32 T = VecDot(AP, N);
+    if (T < 0.0f || T > Denominator)
+    {
+        return false;
+    }
+
+    // Compute barycentric coordinate components and test if within bounds
+    vec3 E = VecCross(QP, AP);
+    f32 V = VecDot(AC, E);
+    if (V < 0.0f || V > Denominator)
+    {
+        return false;
+    }
+    f32 W = -VecDot(AB, E);
+    if (W < 0.0f || W > Denominator)
+    {
+        return false;
+    }
+
+    if (Out_U || Out_V || Out_W || Out_T)
+    {
+        f32 OneOverDenominator = 1.0f / Denominator;
+        V *= OneOverDenominator;
+        W *= OneOverDenominator;
+        if (Out_U) *Out_U = 1.0f - V - W;
+        if (Out_V) *Out_V = V;
+        if (Out_W) *Out_W = W;
+        if (Out_T) *Out_T = T * OneOverDenominator;
+    }
+
+    return true;
+}
+
+bool
+IntersectRayTriangle(vec3 P, vec3 RayDir, vec3 A, vec3 B, vec3 C, f32 *Out_U, f32 *Out_V, f32 *Out_W, f32 *Out_T)
+{
+    vec3 AB = B - A;
+    vec3 AC = C - A;
+
+    // Compute triangle normal
+    vec3 N = VecCross(AB, AC);
+
+    // Compute denominator d. If d <= 0, segment is parallel to or points away from triangle - exit early
+    f32 Denominator = VecDot(RayDir, N);
+    if (Denominator <= 0.0f)
+    {
+        return false;
+    }
+
+    // Compute t - value of PQ at intersection with the plane of the triangle.
+    // Delay dividing by d until intersection has been found to actually pierce the triangle.
+    vec3 AP = P - A;
+    f32 T = VecDot(AP, N);
+    if (T < 0.0f)
+    {
+        return false;
+    }
+
+    // Compute barycentric coordinate components and test if within bounds
+    vec3 E = VecCross(RayDir, AP);
+    f32 V = VecDot(AC, E);
+    if (V < 0.0f || V > Denominator)
+    {
+        return false;
+    }
+    f32 W = -VecDot(AB, E);
+    if (W < 0.0f || W > Denominator)
+    {
+        return false;
+    }
+
+    if (Out_U || Out_V || Out_W || Out_T)
+    {
+        f32 OneOverDenominator = 1.0f / Denominator;
+        V *= OneOverDenominator;
+        W *= OneOverDenominator;
+        if (Out_U) *Out_U = 1.0f - V - W;
+        if (Out_V) *Out_V = V;
+        if (Out_W) *Out_W = W;
+        if (Out_T) *Out_T = T * OneOverDenominator;
+    }
+
+    return true;
+}
+
+bool
+IntersectSegmentCylinder(vec3 SegA, vec3 SegB, vec3 CylP, vec3 CylQ, f32 CylR, f32 *Out_T)
+{
+    vec3 D = CylQ - CylP;
+    vec3 M = SegA - CylP;
+    vec3 N = SegB - SegA;
+
+    f32 MD = VecDot(M, D);
+    f32 ND = VecDot(N, D);
+    f32 DD = VecDot(D, D);
+
+    // Test if segment fully outside either endcap of cylinder
+    if (MD < 0.0f && MD + ND < 0.0f)
+    {
+        // Segment outside 'P' side of cylinder
+        return false;
+    }
+    if (MD > DD && MD + ND > DD)
+    {
+        // Segment outside 'Q' side of cylinder
+        return false;
+    }
+
+    f32 NN = VecDot(N, N);
+    f32 MN = VecDot(M, N);
+    // NOTE: A, B, C form a quadratic equation
+    f32 A = DD * NN - ND * ND;
+    f32 K = VecDot(M, M) - CylR * CylR;
+    f32 C = DD * K - MD * MD;
+    f32 T;
+    if (AbsF32(A) < FLT_EPSILON)
+    {
+        // Segment runs parallel to cylinder axis
+        if (C > 0.0f)
+        {
+            // 'A' and thus the segment lie outside cylinder
+            return false;
+        }
+        // Now that segment intersects cylinder, figure out how it intersects
+        if (MD < 0.0f)
+        {
+            // Intersect segment against 'P' endcap
+            T = -MN / NN;
+        }
+        else if (MD > DD)
+        {
+            // Intersect segment against 'Q' endcap
+            T = (ND - MN) / NN;
+        }
+        else
+        {
+            // 'A' lies inside cylinder
+            T = 0.0f; 
+        }
+        if (Out_T) *Out_T = T;
+        return true;
+    }
+    f32 B = DD * MN - ND * MD;
+    f32 Discriminant = B * B - A * C;
+    if (Discriminant < 0.0f)
+    {
+        // No real roots; no intersection
+        return false;
+    }
+    T = (-B - SqrtF32(Discriminant)) / A;
+    if (T < 0.0f || T > 1.0f)
+    {
+        // Intersection lies outside segment
+        return false;
+    }
+    if (MD + T * ND < 0.0f)
+    {
+        // Intersection outside cylinder on 'P' side
+        if (ND <= 0.0f)
+        {
+            // Segment pointing away from endcap
+            return false;
+        }
+        T = -MD / ND;
+        if (Out_T) *Out_T = T;
+        // Keep intersection if Dot(S(t) - p, S(T) - p) <= r^2
+        return (K + 2 * T * (MN + T * NN) <= 0.0f);
+    }
+    else if (MD + T * ND > DD)
+    {
+        // Intersection outside cylinder on 'Q' side
+        if (ND >= 0.0f)
+        {
+            // Segment pointing away from endcap
+            return false;
+        }
+        T = (DD - MD) / ND;
+        if (Out_T) *Out_T = T;
+        // Keep intersection if Dot(S(t) - q, S(T) - q) <= r^2
+        return (K + DD - 2 * MD + T * (2 * (MN - ND) + T * NN) <= 0.0f);
+    }
+
+    if (Out_T) *Out_T = T;
+    return true;
+}
+
 #pragma warning(pop)

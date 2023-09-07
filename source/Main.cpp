@@ -40,10 +40,11 @@ enum test_case
     TEST_CASE_INTERSECTION_SPHERE_TRIANGLE,
     TEST_CASE_INTERSECTION_TRIANGLE_BOX,
     TEST_CASE_INTERSECTION_TRIANGLE_TRIANGLE,
+    TEST_CASE_MOUSE_PICKING,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_INTERSECTION_TRIANGLE_TRIANGLE;
+global_variable test_case CurrentTestCase = TEST_CASE_MOUSE_PICKING;
 
 void
 ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged);
@@ -879,6 +880,45 @@ main(int Argc, char *Argv[])
                 }
 
                 DrawDebugVizData(DDRenderData, &VizData);
+            } break;
+            case TEST_CASE_MOUSE_PICKING:
+            {
+                glDisable(GL_CULL_FACE);
+
+                sphere Sphere;
+                Sphere.Center = vec3 { -3.0f, 1.0f, -3.0f };
+                Sphere.Radius = 1.5f;
+
+                aabb AABB;
+                AABB.Center = vec3 { -4.0f, 0.5f, 4.0f };
+                AABB.Extents = vec3 { 2.0f, 0.5f, 0.8f };
+
+                obb OBB;
+                OBB.Center = vec3 { -0.5f, 0.5f, 1.0f };
+                OBB.Extents = vec3 { 0.7f, 2.0f, 1.5f };
+                mat3 OBBRotation = Mat3GetRotationAroundAxis(VecNormalize(vec3 { 1.0f, 1.0f, 0.0f }), DegreesToRadians(33.0f));
+                Mat3GetCols(OBBRotation, OBB.Axes);
+
+                vec3 TriA = vec3 { 2.0f, -1.0f, -1.0f };
+                vec3 TriB = vec3 { 4.0f, -0.7f, -2.0f };
+                vec3 TriC = vec3 { 3.0f,  5.0f, 1.5f };
+
+                capsule Capsule;
+                Capsule.Start = vec3 { 4.0f, 0.0f, 3.0f };
+                Capsule.End = vec3 { 4.0f, 2.0f, 2.5f };
+                Capsule.Radius = 0.9f;
+
+                vec3 SphereColor = vec3 { 1.0f, 1.0f, 1.0f };
+                vec3 AABBColor = vec3 { 1.0f, 1.0f, 1.0f };
+                vec3 OBBColor = vec3 { 1.0f, 1.0f, 1.0f };
+                vec3 TriColor = vec3 { 1.0f, 1.0f, 1.0f };
+                vec3 CapsuleColor = vec3 { 1.0f, 1.0f, 1.0f };
+
+                DD_DrawSphere(DDRenderData, PRIM_STYLE_TRANSPARENT, Sphere.Center, Sphere.Radius, SphereColor, 29, 30);
+                DD_DrawAABox(DDRenderData, PRIM_STYLE_TRANSPARENT, AABB.Center, AABB.Extents, AABBColor);
+                DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_TRANSPARENT, OBB.Center, OBB.Extents, OBBRotation, OBBColor);
+                DD_DrawTriangle(DDRenderData, PRIM_STYLE_TRANSPARENT, TriA, TriB, TriC, TriColor);
+                DD_DrawCapsule(DDRenderData, PRIM_STYLE_TRANSPARENT, Capsule.Start, Capsule.End, Capsule.Radius, CapsuleColor, 14, 30);
             } break;
             default:
             {
