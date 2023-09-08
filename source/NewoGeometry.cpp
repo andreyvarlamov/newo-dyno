@@ -1778,39 +1778,39 @@ IntersectRayAABB(vec3 P, vec3 D, aabb A, f32 *Out_TMin, vec3 *Out_Q)
     {
         f32 AMin = A.Center.D[AxisIndex] - A.Extents.D[AxisIndex];
         f32 AMax = A.Center.D[AxisIndex] + A.Extents.D[AxisIndex];
-        if (AbsF32(D.D[AxisIndex] <= FLT_EPSILON))
+        if (AbsF32(D.D[AxisIndex]) <= FLT_EPSILON)
         {
             // Ray is parallel to slab. No hit if origin is not within slab
             if (P.D[AxisIndex] < AMin || P.D[AxisIndex] > AMax)
             {
                 return false;
             }
-            else
+        }
+        else
+        {
+            f32 OneOverD = 1.0f / D.D[AxisIndex];
+            f32 T1 = (AMin - P.D[AxisIndex]) * OneOverD;
+            f32 T2 = (AMax - P.D[AxisIndex]) * OneOverD;
+            // Make T1 be intersection with near plane, T2 - with far plane
+            if (T1 > T2)
             {
-                f32 OneOverD = 1.0f / D.D[AxisIndex];
-                f32 T1 = (AMin - P.D[AxisIndex]) * OneOverD;
-                f32 T2 = (AMax - P.D[AxisIndex]) * OneOverD;
-                // Make T1 be intersection with near plane, T2 - with far plane
-                if (T1 > T2)
-                {
-                    f32 Temp = T1;
-                    T1 = T2;
-                    T2 = Temp;
-                }
-                // Compute the intersection of slab intersection intervals
-                if (T1 > TMin)
-                {
-                    TMin = T1;
-                }
-                if (T2 > TMax)
-                {
-                    TMax = T2;
-                }
+                f32 Temp = T1;
+                T1 = T2;
+                T2 = Temp;
+            }
+            // Compute the intersection of slab intersection intervals
+            if (T1 > TMin)
+            {
+                TMin = T1;
+            }
+            if (T2 < TMax)
+            {
+                TMax = T2;
+            }
 
-                if (TMin > TMax)
-                {
-                    return false;
-                }
+            if (TMin > TMax)
+            {
+                return false;
             }
         }
     }
@@ -1997,7 +1997,9 @@ IntersectSegmentTriangle(vec3 P, vec3 Q, vec3 A, vec3 B, vec3 C, f32 *Out_U, f32
         return false;
     }
     f32 W = -VecDot(AB, E);
-    if (W < 0.0f || W > Denominator)
+    // TODO: There were some errors that were fixed in IntersectRayTriangle that might still happen here
+    // (I think W -> V + W is the only one
+    if (W < 0.0f || V + W > Denominator)
     {
         return false;
     }
@@ -2026,7 +2028,7 @@ IntersectRayTriangle(vec3 P, vec3 RayDir, vec3 A, vec3 B, vec3 C, f32 *Out_U, f3
     vec3 N = VecCross(AB, AC);
 
     // Compute denominator d. If d <= 0, segment is parallel to or points away from triangle - exit early
-    f32 Denominator = VecDot(RayDir, N);
+    f32 Denominator = VecDot(-RayDir, N);
     if (Denominator <= 0.0f)
     {
         return false;
@@ -2042,14 +2044,14 @@ IntersectRayTriangle(vec3 P, vec3 RayDir, vec3 A, vec3 B, vec3 C, f32 *Out_U, f3
     }
 
     // Compute barycentric coordinate components and test if within bounds
-    vec3 E = VecCross(RayDir, AP);
+    vec3 E = VecCross(-RayDir, AP);
     f32 V = VecDot(AC, E);
     if (V < 0.0f || V > Denominator)
     {
         return false;
     }
     f32 W = -VecDot(AB, E);
-    if (W < 0.0f || W > Denominator)
+    if (W < 0.0f || V + W > Denominator)
     {
         return false;
     }

@@ -328,6 +328,11 @@ main(int Argc, char *Argv[])
             DD_DrawVector(DDRenderData, VECTOR_STYLE_OVERLAY, vec3 { 0.0f, 0.0f, 0.0f }, ProjTargetPosition, vec3 { 0.3f, 0.3f, 0.3f });
             DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, CameraTargetPosition, vec3 { 0.3f, 0.3f, 0.3f });
         }
+        if (Camera.IsLookAround)
+        {
+            vec3 CameraTarget = Camera.Position + GetCameraLookDirection(&Camera);
+            DD_DrawDot(DDRenderData, VECTOR_STYLE_OVERLAY, CameraTarget, vec3 { 1.0f, 1.0f, 1.0f });
+        }
 
         // Tests
         switch (CurrentTestCase)
@@ -884,6 +889,10 @@ main(int Argc, char *Argv[])
             case TEST_CASE_MOUSE_PICKING:
             {
                 glDisable(GL_CULL_FACE);
+                Camera.IsLookAround = true;
+                
+                vec3 CameraPosition = Camera.Position;
+                vec3 CameraLookDirection = GetCameraLookDirection(&Camera);
 
                 sphere Sphere;
                 Sphere.Center = vec3 { -3.0f, 1.0f, -3.0f };
@@ -913,6 +922,35 @@ main(int Argc, char *Argv[])
                 vec3 OBBColor = vec3 { 1.0f, 1.0f, 1.0f };
                 vec3 TriColor = vec3 { 1.0f, 1.0f, 1.0f };
                 vec3 CapsuleColor = vec3 { 1.0f, 1.0f, 1.0f };
+
+                if (IntersectRaySphere(CameraPosition, CameraLookDirection, Sphere, NULL, NULL))
+                {
+                    SphereColor = vec3 { 0.0f, 1.0f, 0.0f };
+                }
+
+                if (IntersectRayAABB(CameraPosition, CameraLookDirection, AABB, NULL, NULL))
+                {
+                    AABBColor = vec3 { 0.0f, 1.0f, 0.0f };
+                }
+
+                /*
+                if (IntersectRayOBB(CameraPosition, CameraLookDirection, OBB, NULL, NULL))
+                {
+                    OBBColor = vec3 { 0.0f, 1.0f, 0.0f };
+                }
+                */
+
+                if (IntersectRayTriangle(CameraPosition, CameraLookDirection, TriA, TriB, TriC, NULL, NULL, NULL, NULL))
+                {
+                    TriColor = vec3 { 0.0f, 1.0f, 0.0f };
+                }
+
+                /*
+                if (IntersectRayCapsule(CameraPosition, CameraLookDirection, Capsule, NULL, NULL))
+                {
+                    CapsuleColor = vec3 { 0.0f, 1.0f, 0.0f };
+                }
+                */
 
                 DD_DrawSphere(DDRenderData, PRIM_STYLE_TRANSPARENT, Sphere.Center, Sphere.Radius, SphereColor, 29, 30);
                 DD_DrawAABox(DDRenderData, PRIM_STYLE_TRANSPARENT, AABB.Center, AABB.Extents, AABBColor);

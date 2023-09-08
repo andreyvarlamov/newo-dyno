@@ -103,6 +103,13 @@ GetCameraTarget(dyno_camera *Camera)
     return Result;
 }
 
+vec3
+GetCameraLookDirection(dyno_camera *Camera)
+{
+    vec3 Front = -VecSphericalToCartesian(Camera->Theta, Camera->Phi);
+    return Front;
+}
+
 mat4
 GetViewMat(vec3 EyePosition, vec3 TargetPoint, vec3 WorldUp)
 {

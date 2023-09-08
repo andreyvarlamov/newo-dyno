@@ -276,14 +276,17 @@ bool
 IntersectLineQuad(vec3 P, vec3 Q, vec3 A, vec3 B, vec3 C, vec3 D, vec3 *Out_IntersectionPoint);
 
 // Test if a line segment PQ intersects with a triangle ABC, and return barycentric coordinates of the intersection
+// Ericson 5.3.6
 bool
 IntersectSegmentTriangle(vec3 P, vec3 Q, vec3 A, vec3 B, vec3 C, f32 *Out_U, f32 *Out_V, f32 *Out_W, f32 *Out_T);
 
 // Test if a ray intersects with triangle ABC, and return barycentric coordinates of the intersection
+// Ericson 5.3.6
 bool
 IntersectRayTriangle(vec3 P, vec3 RayDir, vec3 A, vec3 B, vec3 C, f32 *Out_U, f32 *Out_V, f32 *Out_W, f32 *Out_T);
 
 // Test if a segment intersects with cylinder, and return T at which the intersection occurs
+// Ericson 5.3.6
 bool
 IntersectSegmentCylinder(vec3 SegA, vec3 SegB, vec3 CylP, vec3 CylQ, f32 CylR, f32 *Out_T);
 
