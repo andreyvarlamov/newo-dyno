@@ -39,12 +39,13 @@ enum test_case
     TEST_CASE_INTERSECTION_SPHERE_OBB,
     TEST_CASE_INTERSECTION_SPHERE_TRIANGLE,
     TEST_CASE_INTERSECTION_TRIANGLE_BOX,
+    TEST_CASE_INTERSECTION_TRIANGLE_BOX_2,
     TEST_CASE_INTERSECTION_TRIANGLE_TRIANGLE,
     TEST_CASE_MOUSE_PICKING,
     TEST_CASE_COUNT
 };
 
-global_variable test_case CurrentTestCase = TEST_CASE_MOUSE_PICKING;
+global_variable test_case CurrentTestCase = TEST_CASE_INTERSECTION_TRIANGLE_BOX_2;
 
 void
 ProcessPointSetUpdate(const u8 *CurrentKeyStates, u8 *KeyWasDown, vec3 *PointSet, u32 *PointsUsed, u32 PointBufferCount, bool *PointSetChanged);
@@ -832,6 +833,37 @@ main(int Argc, char *Argv[])
                 {
                     DD_VisualizeRotationMat(DDRenderData, VECTOR_STYLE_OVERLAY, Rotation, 2.0f, Box.Center, vec3 { 0.5f, 0.5f, 0.5f });
                 }
+
+                DrawDebugVizData(DDRenderData, &VizData);
+            } break;
+            case TEST_CASE_INTERSECTION_TRIANGLE_BOX_2:
+            {
+                glDisable(GL_CULL_FACE);
+
+                obb Box;
+                Box.Center = vec3 { 2.0f, 2.0f, 0.0f } + ControlledPosition;
+                Box.Extents = vec3 { 0.5f, 2.0f, 0.5f };
+                mat3 Rotation = Mat3FromCols(vec3 { 1.0f, 0.0f, 0.0f },
+                                             vec3 { 0.0f, 1.0f, 0.0f },
+                                             vec3 { 0.0f, 0.0f, 1.0f });
+                Mat3GetCols(Rotation, Box.Axes);
+
+                vec3 A = vec3 { -1.0f, 0.0f, 0.0f };
+                vec3 B = vec3 { 1.0f, 0.0f, 0.0f };
+                vec3 C = vec3 { 0.0f, 2.0f, 0.0f };
+                vec3 Centroid = (A + B + C) / 3.0f;
+                vec3 Normal = VecNormalize(VecCross(B - A, C - A));
+
+                vec3 Color = vec3 { 1.0f, 1.0f, 1.0f };
+
+                debug_viz_data VizData = {};
+                if (TestTriangleBox(A, B, C, Box.Center, Box.Extents, Box.Axes, &VizData))
+                {
+                    Color = vec3 { 0.0f, 1.0f, 0.0f };
+                }
+
+                DD_DrawTriangle(DDRenderData, PRIM_STYLE_TRANSPARENT, A, B, C, Color);
+                DD_DrawOrientedBox(DDRenderData, PRIM_STYLE_TRANSPARENT, Box.Center, Box.Extents, Rotation, Color);
 
                 DrawDebugVizData(DDRenderData, &VizData);
             } break;
